@@ -5,6 +5,7 @@ import { listActiveTags } from './db/tags';
 import { requestPersistentStorage } from './lib/persistStorage';
 import { TradeForm } from './components/TradeForm';
 import { StockDetail } from './components/StockDetail';
+import { BackupControls } from './components/BackupControls';
 import type { Tag, Trade } from './types';
 
 export function App() {
@@ -36,6 +37,7 @@ export function App() {
           <button type="button" onClick={() => setScreen('form')}>
             + 매매 기록 추가
           </button>
+          <BackupControls db={db} onImported={() => window.location.reload()} />
           <StockDetail db={db} ticker={activeTicker} tags={tags} />
         </>
       )}
