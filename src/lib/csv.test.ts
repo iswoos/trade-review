@@ -36,4 +36,11 @@ describe('CSV round-trip', () => {
     const [restored] = csvToTrades(csv);
     expect(restored).toEqual(nullish);
   });
+
+  it('handles literal newlines inside quoted memo fields', () => {
+    const withNewline: Trade = { ...sample, memo: '첫째 줄\n둘째 줄' };
+    const csv = tradesToCsv([withNewline]);
+    const [restored] = csvToTrades(csv);
+    expect(restored).toEqual(withNewline);
+  });
 });

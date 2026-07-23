@@ -30,39 +30,79 @@ export function tradesToCsv(trades: Trade[]): string {
   return [header, ...rows].join('\n');
 }
 
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = '';
+function parseCsvRows(csv: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+
+  for (let i = 0; i < csv.length; i++) {
+    const char = csv[i];
+    const nextChar = csv[i + 1];
+
     if (inQuotes) {
-      if (char === '"' && line[i + 1] === '"') {
-        current += '"';
+      if (char === '"' && nextChar === '"') {
+        // Escaped quote
+        currentField += '"';
         i++;
       } else if (char === '"') {
+        // End of quoted field
         inQuotes = false;
       } else {
-        current += char;
+        // Any character inside quotes (including newlines)
+        currentField += char;
       }
-    } else if (char === '"') {
-      inQuotes = true;
-    } else if (char === ',') {
-      fields.push(current);
-      current = '';
     } else {
-      current += char;
+      if (char === '"') {
+        // Start of quoted field
+        inQuotes = true;
+      } else if (char === ',') {
+        // Field separator
+        currentRow.push(currentField);
+        currentField = '';
+      } else if (char === '\r' && nextChar === '\n') {
+        // CRLF row separator (Windows)
+        if (currentField.length > 0 || currentRow.length > 0) {
+          currentRow.push(currentField);
+          if (currentRow.length > 0) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = '';
+        }
+        i++; // Skip the \n
+      } else if (char === '\n') {
+        // LF row separator (Unix)
+        if (currentField.length > 0 || currentRow.length > 0) {
+          currentRow.push(currentField);
+          if (currentRow.length > 0) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = '';
+        }
+      } else {
+        // Regular character
+        currentField += char;
+      }
     }
   }
-  fields.push(current);
-  return fields;
+
+  // Push the last field and row
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField);
+  }
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return rows;
 }
 
 export function csvToTrades(csv: string): Trade[] {
-  const lines = csv.split('\n').filter((line) => line.trim().length > 0);
-  const [, ...dataLines] = lines;
-  return dataLines.map((line) => {
-    const fields = parseCsvLine(line);
+  const rows = parseCsvRows(csv);
+  const [, ...dataRows] = rows;
+  return dataRows.map((fields) => {
     const record: Record<Column, string> = {} as Record<Column, string>;
     CSV_COLUMNS.forEach((col, i) => {
       record[col] = fields[i] ?? '';
