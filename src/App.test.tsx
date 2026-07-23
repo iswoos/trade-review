@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
@@ -23,8 +23,13 @@ vi.mock('lightweight-charts', () => ({
   LineStyle: { Dashed: 2 },
 }));
 
-beforeEach(() => {
-  indexedDB.deleteDatabase('trade-review');
+beforeEach(async () => {
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase('trade-review');
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
+  });
 });
 
 describe('App', () => {

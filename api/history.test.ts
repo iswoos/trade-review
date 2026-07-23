@@ -31,6 +31,24 @@ describe('GET /api/history', () => {
     expect(res.json).toHaveBeenCalledWith({ bars: [{ date: '2026-07-17', close: 7.39 }] });
   });
 
+  it('filters out rows with non-finite close (e.g. null on non-trading gap days)', async () => {
+    vi.mocked(yahooFinance.chart).mockResolvedValue({
+      quotes: [
+        { date: new Date('2026-07-16T00:00:00.000Z'), close: 7.1 },
+        { date: new Date('2026-07-17T00:00:00.000Z'), close: null },
+        { date: new Date('2026-07-18T00:00:00.000Z'), close: 7.39 },
+      ],
+    } as any);
+    const res = mockRes();
+    await handler({ query: { symbol: 'JOBY' } } as any, res);
+    expect(res.json).toHaveBeenCalledWith({
+      bars: [
+        { date: '2026-07-16', close: 7.1 },
+        { date: '2026-07-18', close: 7.39 },
+      ],
+    });
+  });
+
   it('returns 502 on upstream failure', async () => {
     vi.mocked(yahooFinance.chart).mockRejectedValue(new Error('down'));
     const res = mockRes();

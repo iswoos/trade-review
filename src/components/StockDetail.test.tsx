@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
@@ -24,9 +24,18 @@ vi.mock('lightweight-charts', () => ({
 let db: IDBPDatabase<TradeReviewDB>;
 
 beforeEach(async () => {
-  indexedDB.deleteDatabase('trade-review');
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase('trade-review');
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
+  });
   db = await openTradeReviewDB();
   vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2025-07-10', close: 11.36 }]);
+});
+
+afterEach(() => {
+  db.close();
 });
 
 describe('StockDetail', () => {
