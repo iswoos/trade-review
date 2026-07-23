@@ -61,4 +61,41 @@ describe('TradeForm', () => {
     expect(onSaved).toHaveBeenCalledOnce();
     expect(onSaved.mock.calls[0][0].rationaleTagIds).toEqual([]);
   });
+
+  it('saves the selected past date as the trade datetime', async () => {
+    const onSaved = vi.fn();
+    render(<TradeForm db={db} availableTags={[]} onSaved={onSaved} />);
+
+    await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비/ }));
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+
+    const dateInput = screen.getByLabelText('체결 날짜');
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, '2025-07-10');
+
+    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+
+    expect(onSaved).toHaveBeenCalledOnce();
+    const saved = onSaved.mock.calls[0][0];
+    expect(saved.datetime).toBe(new Date('2025-07-10').toISOString());
+    expect(saved.datetimeUnknown).toBe(false);
+  });
+
+  it('saves datetime as null and datetimeUnknown as true when "시간 모름/예약매매" is toggled on', async () => {
+    const onSaved = vi.fn();
+    render(<TradeForm db={db} availableTags={[]} onSaved={onSaved} />);
+
+    await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비/ }));
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+
+    await userEvent.click(screen.getByRole('button', { name: '시간 모름 / 예약매매' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+
+    expect(onSaved).toHaveBeenCalledOnce();
+    const saved = onSaved.mock.calls[0][0];
+    expect(saved.datetime).toBeNull();
+    expect(saved.datetimeUnknown).toBe(true);
+  });
 });

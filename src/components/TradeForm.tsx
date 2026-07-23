@@ -25,6 +25,8 @@ export function TradeForm({ db, availableTags, onSaved }: TradeFormProps) {
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [conviction, setConviction] = useState<number | null>(null);
   const [memo, setMemo] = useState('');
+  const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
+  const [datetimeUnknown, setDatetimeUnknown] = useState(false);
 
   async function handleSelectSymbol(result: SymbolResult) {
     setSymbol(result);
@@ -44,8 +46,8 @@ export function TradeForm({ db, availableTags, onSaved }: TradeFormProps) {
       market: currency === 'KRW' ? 'KR' : 'US',
       name: symbol.name,
       currency,
-      datetime: new Date().toISOString(),
-      datetimeUnknown: false,
+      datetime: datetimeUnknown ? null : new Date(datetimeValue).toISOString(),
+      datetimeUnknown,
       side,
       price: Number(price),
       quantityType,
@@ -89,6 +91,23 @@ export function TradeForm({ db, availableTags, onSaved }: TradeFormProps) {
               inputMode="decimal"
             />
           </label>
+          <label>
+            체결 날짜
+            <input
+              aria-label="체결 날짜"
+              type="date"
+              value={datetimeValue}
+              onChange={(e) => setDatetimeValue(e.target.value)}
+              disabled={datetimeUnknown}
+            />
+          </label>
+          <button
+            type="button"
+            aria-pressed={datetimeUnknown}
+            onClick={() => setDatetimeUnknown((prev) => !prev)}
+          >
+            시간 모름 / 예약매매
+          </button>
           <div role="radiogroup" aria-label="수량 단위">
             <button
               type="button"
