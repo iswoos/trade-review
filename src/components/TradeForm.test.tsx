@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
@@ -12,10 +12,19 @@ vi.mock('../api/quotes');
 let db: IDBPDatabase<TradeReviewDB>;
 
 beforeEach(async () => {
-  indexedDB.deleteDatabase('trade-review');
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase('trade-review');
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
+  });
   db = await openTradeReviewDB();
   vi.mocked(quotes.searchSymbols).mockResolvedValue([{ symbol: 'JOBY', name: '조비', exchange: 'NYQ' }]);
   vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
+});
+
+afterEach(async () => {
+  db.close();
 });
 
 describe('TradeForm', () => {
