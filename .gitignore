@@ -6,3 +6,7 @@
 
 # Subagent-driven-development scratch ledger — not part of the project.
 /.superpowers/
+
+node_modules/
+dist/
+.vercel/
