@@ -2968,7 +2968,133 @@ git commit -m "feat: CSV 내보내기/가져오기 UI 연결 (12절 MVP 필수 �
 
 ---
 
-## Manual Verification (not automated — do after Task 20)
+### Task 21: Trade datetime input (past dates + "시간 모름/예약매매")
+
+The final whole-branch review (after Task 20) found that `TradeForm` (Task 17) hardcodes `datetime: new Date().toISOString()` on every save, with no way to enter a past trade date or mark it unknown/scheduled — even though `Trade`, `Position`, and the CSV layer already fully support `datetime: string | null` + `datetimeUnknown`. This directly affects the app's core "복기" value: entering a historical trade would misplace its chart marker on today's date instead of when it actually happened. This task closes that gap.
+
+**Files:**
+- Modify: `src/components/TradeForm.tsx`
+- Modify: `src/components/TradeForm.test.tsx`
+
+**Interfaces:**
+- No new exports — this only changes `TradeForm`'s internal state and the `datetime`/`datetimeUnknown` fields passed to `createTrade` (Task 8), which already accepts both.
+
+- [ ] **Step 1: Write the two new failing tests, added to the existing `describe('TradeForm', ...)` block**
+
+```tsx
+// Add to src/components/TradeForm.test.tsx, inside the existing describe('TradeForm', ...) block
+it('saves the selected past date as the trade datetime', async () => {
+  const onSaved = vi.fn();
+  render(<TradeForm db={db} availableTags={[]} onSaved={onSaved} />);
+
+  await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+  await userEvent.click(await screen.findByRole('button', { name: /조비/ }));
+  await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+
+  const dateInput = screen.getByLabelText('체결 날짜');
+  await userEvent.clear(dateInput);
+  await userEvent.type(dateInput, '2025-07-10');
+
+  await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+
+  expect(onSaved).toHaveBeenCalledOnce();
+  const saved = onSaved.mock.calls[0][0];
+  expect(saved.datetime).toBe(new Date('2025-07-10').toISOString());
+  expect(saved.datetimeUnknown).toBe(false);
+});
+
+it('saves datetime as null and datetimeUnknown as true when "시간 모름/예약매매" is toggled on', async () => {
+  const onSaved = vi.fn();
+  render(<TradeForm db={db} availableTags={[]} onSaved={onSaved} />);
+
+  await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+  await userEvent.click(await screen.findByRole('button', { name: /조비/ }));
+  await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+
+  await userEvent.click(screen.getByRole('button', { name: '시간 모름 / 예약매매' }));
+  await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+
+  expect(onSaved).toHaveBeenCalledOnce();
+  const saved = onSaved.mock.calls[0][0];
+  expect(saved.datetime).toBeNull();
+  expect(saved.datetimeUnknown).toBe(true);
+});
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `source ~/.nvm/nvm.sh && nvm use 20 && npx vitest run src/components/TradeForm.test.tsx`
+Expected: FAIL — `getByLabelText('체결 날짜')` and the "시간 모름 / 예약매매" button don't exist yet; the two new tests fail, the four pre-existing tests still pass.
+
+- [ ] **Step 3: Add datetime state to `TradeForm.tsx`**
+
+Add these two lines of state alongside the existing `useState` calls (after the `memo` state):
+
+```tsx
+const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
+const [datetimeUnknown, setDatetimeUnknown] = useState(false);
+```
+
+- [ ] **Step 4: Replace the hardcoded datetime fields in `handleSave`**
+
+Find this in `handleSave`'s `createTrade` call:
+
+```tsx
+      datetime: new Date().toISOString(),
+      datetimeUnknown: false,
+```
+
+Replace with:
+
+```tsx
+      datetime: datetimeUnknown ? null : new Date(datetimeValue).toISOString(),
+      datetimeUnknown,
+```
+
+- [ ] **Step 5: Add the date input and the unknown-time toggle to the JSX**
+
+Insert this right after the 체결가 `<label>` block (before the 수량 단위 `<div role="radiogroup">`):
+
+```tsx
+          <label>
+            체결 날짜
+            <input
+              aria-label="체결 날짜"
+              type="date"
+              value={datetimeValue}
+              onChange={(e) => setDatetimeValue(e.target.value)}
+              disabled={datetimeUnknown}
+            />
+          </label>
+          <button
+            type="button"
+            aria-pressed={datetimeUnknown}
+            onClick={() => setDatetimeUnknown((prev) => !prev)}
+          >
+            시간 모름 / 예약매매
+          </button>
+```
+
+- [ ] **Step 6: Run tests to verify all 6 pass**
+
+Run: `source ~/.nvm/nvm.sh && nvm use 20 && npx vitest run src/components/TradeForm.test.tsx`
+Expected: PASS (6 tests — the original 4 plus these 2 new ones)
+
+- [ ] **Step 7: Run the full suite and build**
+
+Run: `npm test` — expect all tests passing (58+ total).
+Run: `npm run build` — expect exit 0.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/components/TradeForm.tsx src/components/TradeForm.test.tsx
+git commit -m "feat: 매매 기록에 체결 날짜 입력 및 시간 모름/예약매매 토글 추가 (최종 리뷰 Important #1 반영)"
+```
+
+---
+
+## Manual Verification (not automated — do after Task 21)
 
 - [ ] `npm run dev`, open on a real phone (or Chrome DevTools device toolbar) and confirm the trade-entry-to-tag-save flow feels like "a couple of taps," per the 기획서 S2 success criterion.
 - [ ] Deploy to Vercel (`vercel --prod` or push to the connected GitHub repo) and confirm `/api/search`, `/api/quote`, `/api/history` respond correctly in production, not just via mocks.
