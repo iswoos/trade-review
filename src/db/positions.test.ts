@@ -44,7 +44,7 @@ describe('getPosition', () => {
   it('derives avgCost/totalQuantity/realizedPl from stored trades, ordered by datetime', async () => {
     await createTrade(db, tradeInput({ side: 'buy', price: 10, quantityValue: 10, datetime: '2025-01-01T00:00:00.000Z' }));
     await createTrade(db, tradeInput({ side: 'buy', price: 20, quantityValue: 10, datetime: '2025-01-02T00:00:00.000Z' }));
-    await createTrade(db, tradeInput({ side: 'sell', price: 25, quantityValue: 5, datetime: '2025-01-03T00:00:00.000Z' }));
+    const lastTrade = await createTrade(db, tradeInput({ side: 'sell', price: 25, quantityValue: 5, datetime: '2025-01-03T00:00:00.000Z' }));
 
     const position = await getPosition(db, 'JOBY');
 
@@ -53,12 +53,25 @@ describe('getPosition', () => {
     expect(position.avgCost).toBeCloseTo(15, 6); // unaffected by the sell
     expect(position.realizedPl).toBeCloseTo((25 - 15) * 5, 6);
     expect(position.avgCostHistory).toHaveLength(3);
+    expect(position.lastTradeRecordedAt).toBe(lastTrade.recordedAt);
   });
 
   it('falls back to recordedAt ordering when datetime is null (unknown-time trades)', async () => {
     await createTrade(db, tradeInput({ datetime: null, datetimeUnknown: true, price: 10, quantityValue: 10 }));
     const position = await getPosition(db, 'JOBY');
     expect(position.totalQuantity).toBe(10);
+  });
+
+  it('ties lastTradeRecordedAt to the trade with the latest occurredAt, not database insertion order', async () => {
+    const chronologicallyLast = await createTrade(
+      db,
+      tradeInput({ price: 10, quantityValue: 10, datetime: '2025-01-05T00:00:00.000Z' })
+    );
+    await createTrade(db, tradeInput({ price: 20, quantityValue: 10, datetime: '2025-01-01T00:00:00.000Z' }));
+
+    const position = await getPosition(db, 'JOBY');
+
+    expect(position.lastTradeRecordedAt).toBe(chronologicallyLast.recordedAt);
   });
 });
 

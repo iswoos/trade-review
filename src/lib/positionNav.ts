@@ -3,6 +3,7 @@ export interface PositionListItem {
   name: string;
   avgCost: number;
   lastTradeAt: string;
+  lastTradeRecordedAt?: string;
   currentPrice: number | null;
 }
 
@@ -16,7 +17,11 @@ function pnlPercent(item: PositionListItem): number {
 export function sortPositionItems(items: PositionListItem[], order: SortOrder): PositionListItem[] {
   const copy = [...items];
   if (order === 'recent') {
-    return copy.sort((a, b) => b.lastTradeAt.localeCompare(a.lastTradeAt));
+    return copy.sort((a, b) => {
+      const byLastTradeAt = b.lastTradeAt.localeCompare(a.lastTradeAt);
+      if (byLastTradeAt !== 0) return byLastTradeAt;
+      return (b.lastTradeRecordedAt ?? '').localeCompare(a.lastTradeRecordedAt ?? '');
+    });
   }
   if (order === 'alphabetical') {
     return copy.sort((a, b) => a.ticker.localeCompare(b.ticker));

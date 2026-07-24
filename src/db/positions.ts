@@ -17,6 +17,7 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
   const trades = sortByOccurredAt(await listTradesByTicker(db, ticker));
   let state = EMPTY_POSITION_STATE;
   const avgCostHistory: { at: string; avgCost: number }[] = [];
+  let lastTradeRecordedAt = '';
 
   for (const trade of trades) {
     state =
@@ -24,6 +25,7 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
         ? applyBuy(state, trade.price, trade.quantity)
         : applySell(state, trade.price, trade.quantity);
     avgCostHistory.push({ at: occurredAt(trade), avgCost: state.avgCost });
+    lastTradeRecordedAt = trade.recordedAt;
   }
 
   return {
@@ -33,6 +35,7 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
     totalQuantity: state.totalQuantity,
     avgCostHistory,
     realizedPl: state.realizedPl,
+    lastTradeRecordedAt,
   };
 }
 

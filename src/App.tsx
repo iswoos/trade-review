@@ -70,6 +70,7 @@ export function App() {
           name: p.name,
           avgCost: p.avgCost,
           lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
+          lastTradeRecordedAt: p.lastTradeRecordedAt,
           currentPrice: prices[p.ticker] ?? null,
         })),
     [positions, prices]
