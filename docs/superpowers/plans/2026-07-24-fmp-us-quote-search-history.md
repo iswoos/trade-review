@@ -409,8 +409,8 @@ describe('GET /api/history', () => {
 
   it('routes non-Korean symbols to FMP and maps price to close', async () => {
     mockFmpHistoryOk([
-      { symbol: 'JOBY', date: '2026-07-17', price: 7.1 },
       { symbol: 'JOBY', date: '2026-07-18', price: 7.39 },
+      { symbol: 'JOBY', date: '2026-07-17', price: 7.1 },
     ]);
     const res = mockRes();
     await handler({ query: { symbol: 'JOBY' } } as any, res);
