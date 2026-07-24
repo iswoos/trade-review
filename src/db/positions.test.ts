@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from './schema';
 import { createTrade } from './trades';
-import { getPosition } from './positions';
+import { getPosition, listPositions } from './positions';
 
 let db: IDBPDatabase<TradeReviewDB>;
 
@@ -59,5 +59,28 @@ describe('getPosition', () => {
     await createTrade(db, tradeInput({ datetime: null, datetimeUnknown: true, price: 10, quantityValue: 10 }));
     const position = await getPosition(db, 'JOBY');
     expect(position.totalQuantity).toBe(10);
+  });
+});
+
+describe('listPositions', () => {
+  it('returns one Position per distinct ticker across all stored trades', async () => {
+    await createTrade(
+      db,
+      tradeInput({ ticker: 'JOBY', name: '조비', price: 10, quantityValue: 10, datetime: '2025-01-01T00:00:00.000Z' })
+    );
+    await createTrade(
+      db,
+      tradeInput({ ticker: 'AAPL', name: 'Apple Inc.', price: 100, quantityValue: 5, datetime: '2025-01-02T00:00:00.000Z' })
+    );
+
+    const positions = await listPositions(db);
+
+    expect(positions.map((p) => p.ticker).sort()).toEqual(['AAPL', 'JOBY']);
+    const aapl = positions.find((p) => p.ticker === 'AAPL');
+    expect(aapl?.avgCost).toBeCloseTo(100, 6);
+  });
+
+  it('returns an empty array when there are no trades at all', async () => {
+    expect(await listPositions(db)).toEqual([]);
   });
 });
