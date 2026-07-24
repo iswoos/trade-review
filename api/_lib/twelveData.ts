@@ -5,6 +5,9 @@ interface TwelveDataQuoteResponse {
 
 interface TwelveDataTimeSeriesValue {
   datetime: string;
+  open: string;
+  high: string;
+  low: string;
   close: string;
 }
 
@@ -49,13 +52,21 @@ export async function twelveDataQuote(symbol: string): Promise<{ symbol: string;
   return { symbol: data.symbol, price: Number(data.close) };
 }
 
-export async function twelveDataHistory(symbol: string): Promise<{ date: string; price: number }[]> {
+export async function twelveDataHistory(
+  symbol: string
+): Promise<{ date: string; open: number; high: number; low: number; price: number }[]> {
   const data = (await twelveDataFetch('time_series', {
     symbol,
     interval: '1day',
     outputsize: '365',
   })) as TwelveDataTimeSeriesResponse;
-  return [...data.values].reverse().map((v) => ({ date: v.datetime, price: Number(v.close) }));
+  return [...data.values].reverse().map((v) => ({
+    date: v.datetime,
+    open: Number(v.open),
+    high: Number(v.high),
+    low: Number(v.low),
+    price: Number(v.close),
+  }));
 }
 
 export async function twelveDataSearch(

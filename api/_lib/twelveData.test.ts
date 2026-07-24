@@ -45,23 +45,23 @@ describe('twelveDataQuote', () => {
 });
 
 describe('twelveDataHistory', () => {
-  it('maps values to {date, price}, reversed to oldest first', async () => {
+  it('maps values to {date, open, high, low, price}, reversed to oldest first', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
           values: [
-            { datetime: '2026-07-18', close: '7.39' },
-            { datetime: '2026-07-17', close: '7.1' },
+            { datetime: '2026-07-18', open: '7.2', high: '7.45', low: '7.05', close: '7.39' },
+            { datetime: '2026-07-17', open: '7.0', high: '7.15', low: '6.95', close: '7.1' },
           ],
         }),
       })
     );
     const bars = await twelveDataHistory('JOBY');
     expect(bars).toEqual([
-      { date: '2026-07-17', price: 7.1 },
-      { date: '2026-07-18', price: 7.39 },
+      { date: '2026-07-17', open: 7.0, high: 7.15, low: 6.95, price: 7.1 },
+      { date: '2026-07-18', open: 7.2, high: 7.45, low: 7.05, price: 7.39 },
     ]);
   });
 

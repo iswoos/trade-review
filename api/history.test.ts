@@ -71,8 +71,8 @@ describe('GET /api/history', () => {
         ok: true,
         json: async () => ({
           values: [
-            { datetime: '2026-07-18', close: '7.39' },
-            { datetime: '2026-07-17', close: '7.1' },
+            { datetime: '2026-07-18', open: '7.2', high: '7.45', low: '7.05', close: '7.39' },
+            { datetime: '2026-07-17', open: '7.0', high: '7.15', low: '6.95', close: '7.1' },
           ],
         }),
       })
