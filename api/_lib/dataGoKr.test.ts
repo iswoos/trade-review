@@ -114,6 +114,15 @@ describe('dataGoKrHistory', () => {
     ]);
   });
 
+  it('strips thousands-separator commas from clpr before parsing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(okResponse([{ basDt: '20260718', srtnCd: '005930', clpr: '72,000' }]))
+    );
+    const bars = await dataGoKrHistory('005930.KS');
+    expect(bars).toEqual([{ date: '2026-07-18', price: 72000 }]);
+  });
+
   it('requests a beginBasDt/endBasDt range with the KR suffix stripped', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse([]));
     vi.stubGlobal('fetch', fetchMock);
