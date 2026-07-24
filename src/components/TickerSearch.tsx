@@ -44,7 +44,7 @@ export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
                   <button
                     type="button"
                     onClick={() => onSelectTicker(p.ticker, p.name)}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
                     {p.name} ({p.ticker})
                   </button>
@@ -58,7 +58,7 @@ export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
                 <button
                   type="button"
                   onClick={() => onSelectTicker(r.symbol, r.name)}
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {r.name} ({r.symbol})
                 </button>

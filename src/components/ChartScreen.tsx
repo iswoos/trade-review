@@ -151,7 +151,7 @@ export function ChartScreen({
             <button
               type="button"
               onClick={() => setShowListSheet(false)}
-              className="mb-2 rounded-lg px-3 py-1 text-sm text-zinc-500 dark:text-zinc-400"
+              className="mb-2 rounded-xl px-3 py-1 text-sm text-zinc-500 dark:text-zinc-400"
             >
               닫기
             </button>
