@@ -69,24 +69,16 @@ export function App() {
     if (db) await reloadPositions(db);
   }
 
-  async function handleImported() {
-    if (!db) return;
-    setTags(await listActiveTags(db));
-    await reloadPositions(db);
-  }
-
   if (!db) return <p>불러오는 중...</p>;
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {screen === 'home' && (
         <HomeScreen
-          db={db}
           positions={positionItems}
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
           onSelectTicker={handleSelectTicker}
-          onImported={handleImported}
         />
       )}
       {screen === 'chart' && activeTicker && (
