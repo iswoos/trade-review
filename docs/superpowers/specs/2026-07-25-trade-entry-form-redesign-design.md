@@ -25,8 +25,10 @@ Direct use of the trade-entry form (`AddTradeSheet.tsx`) and search (`TickerSear
 ## Out of scope
 
 - Chart-screen changes — separate spec/plan.
-- FX-rate auto-fetch, image attachments in memos — both explicitly deferred in an earlier session, unaffected by this work.
+- Image attachments in memos — deferred in an earlier session, unaffected by this work.
 - Renaming/restructuring the underlying `Trade`/`Tag` DB schema — `Tag` already has exactly what's needed (`{id, name, archived}`).
+
+(FX-rate auto-fetch was also deferred earlier, but is now explicitly back in scope — see below.)
 
 ## Search debounce (KR instant, US 500ms)
 
@@ -42,9 +44,13 @@ Direct use of the trade-entry form (`AddTradeSheet.tsx`) and search (`TickerSear
 
 **Validation (blocks save)**: the submit button's `disabled` attribute becomes:
 ```
-!datetimeValue || !price.trim() || !quantityValue.trim() || tagIds.length === 0
+!datetimeValue ||
+!price.trim() ||
+!quantityValue.trim() ||
+tagIds.length === 0 ||
+(quantityType === 'amount' && currency !== 'KRW' && !fxRateAtTrade)
 ```
-(`side` always has a valid default of `'buy'`/`'sell'` from a two-button toggle, so it can't be "empty" — no separate check needed.) `timeValue` is never part of this check — it stays optional. `handleSave` itself is otherwise unchanged (still builds `datetime` from `datetimeValue` + optional `timeValue`).
+(`side` always has a valid default of `'buy'`/`'sell'` from a two-button toggle, so it can't be "empty" — no separate check needed.) `timeValue` is never part of this check — it stays optional. The last clause only applies in the one mode where an FX rate is needed at all (see FX rate auto-fetch below) — `fxRateAtTrade` is populated automatically, not by the user, but save still waits for it to be present. `handleSave` itself is otherwise unchanged (still builds `datetime` from `datetimeValue` + optional `timeValue`).
 
 **Remove `ConvictionStars`**: delete the import, the `conviction` state, and the `<ConvictionStars .../>` element. `createTrade`'s `conviction` argument is passed `null` unconditionally (the field stays in the `Trade` type/schema for backward compatibility with existing saved trades — not part of this change).
 
@@ -59,6 +65,17 @@ Direct use of the trade-entry form (`AddTradeSheet.tsx`) and search (`TickerSear
 {currency === 'KRW' ? '금액(원)' : '금액($)'}
 ```
 The quantity input's own `<label>` text (currently `수량` / `금액(원)` unconditionally) becomes `수량(주)` / the same currency-aware `금액(원)`/`금액($)` string. The price input's label gains the same currency-aware suffix: `체결가 (원)` for KRW, `체결가 ($)` for USD.
+
+## FX rate auto-fetch (replaces manual entry)
+
+Today, when `quantityType === 'amount' && currency !== 'KRW'`, the form shows a manual "체결 시점 환율" number input the user must fill in themselves. This is removed entirely and replaced with an automatic fetch of the historical USD/KRW rate for the trade's execution date.
+
+Twelve Data (already integrated, same API key already in use for US stock quotes) supports forex pairs through the same `time_series` endpoint already used for stock history — confirmed via a live call: `GET https://api.twelvedata.com/time_series?symbol=USD/KRW&interval=1day&start_date=<date>&end_date=<date>` returns `{ values: [{ datetime, open, high, low, close }], ... }` for that date. No new provider, no new API key, no new signup — this is an addition to the existing `api/_lib/twelveData.ts` client.
+
+- **New client function**: `twelveDataFxRate(date: string): Promise<number>` in `api/_lib/twelveData.ts`, requesting `USD/KRW` `time_series` for that date and parsing `values[0].close`. If the exact date has no data (forex has thin weekend/holiday gaps, unlike the once-a-year KRX-listing case but the same shape of problem), walk backward up to a few days similarly to how `dataGoKrQuote`/`fetch-krx-listing.mjs` already handle "nearest prior trading day" — reuse that pattern rather than inventing a new one.
+- **New endpoint**: `api/fxrate.ts`, `GET /api/fxrate?date=YYYY-MM-DD`, calling `twelveDataFxRate` and returning `{ rate: number }`, with the same `try/catch` → `502` pattern every other endpoint in this codebase uses.
+- **New client-side function**: `fetchFxRate(date: string): Promise<number | null>` in `src/api/quotes.ts`, following the existing `fetchQuote`/`fetchHistory` fetch-and-swallow-to-null-on-failure convention (no cache — this is a low-frequency, one-shot fetch per trade entry, not a hot path worth protecting with a TTL cache the way search/quote/history are).
+- **`AddTradeSheet.tsx`**: the manual `fxRateAtTrade` input and its label are deleted. When `quantityType === 'amount' && currency !== 'KRW'` and `datetimeValue` is set, an effect calls `fetchFxRate(datetimeValue)` and stores the result in `fxRateAtTrade` state (kept, just no longer user-editable — `handleSave` reads it exactly as it does today). If the fetch fails (`null`), the form shows an inline "환율 조회 실패 — 다시 시도" message with a retry button instead of falling back to a manual field, and save stays disabled per the required-fields rule (`fxRateAtTrade` empty counts as missing, same as any other required field, only surfaced in this one currency/quantity-mode combination).
 
 ## Default rationale tags + seeding
 
@@ -79,7 +96,10 @@ A new screen, `TagManagementScreen.tsx`. `src/db/tags.ts` only supports create, 
 ## Testing
 
 - `TickerSearch.test.tsx`: a Hangul query calls `searchSymbols` synchronously (no fake-timer advance needed); a non-Hangul query still requires advancing the existing debounce timer — extends the existing fake-timer test file, doesn't replace it.
-- `AddTradeSheet.test.tsx`: buy/sell button colors; save button disabled when each required field is empty in turn, enabled once all are filled with time left blank; time-unknown toggle and its tests removed; `ConvictionStars` import/usage removed from the test file too; currency-aware label text for both a KRW-quote and a USD-quote ticker; tag heading text present.
+- `AddTradeSheet.test.tsx`: buy/sell button colors; save button disabled when each required field is empty in turn, enabled once all are filled with time left blank; time-unknown toggle and its tests removed; `ConvictionStars` import/usage removed from the test file too; currency-aware label text for both a KRW-quote and a USD-quote ticker; tag heading text present; manual FX-rate input is gone; entering amount-mode for a USD trade triggers `fetchFxRate`, populates `fxRateAtTrade` from its result, and disables save until it resolves; a failed fetch shows the retry message and keeps save disabled, with a retry button that calls `fetchFxRate` again.
+- `api/_lib/twelveData.test.ts`: `twelveDataFxRate` requests `time_series` for `USD/KRW` with the given date, parses `values[0].close`, and walks backward on empty results the same way the existing backward-search tests in this codebase are structured.
+- `api/fxrate.test.ts` (new): mirrors the existing `api/quote.test.ts` shape — 400 on missing `date`, 200 with `{ rate }` on success, 502 on failure.
+- `src/api/quotes.test.ts`: `fetchFxRate` returns the parsed rate on success and `null` on failure, matching `fetchQuote`'s existing fetch-and-swallow convention (no cache tests needed — this function isn't cached).
 - `TagManagementScreen.test.tsx` (new): create adds a tag visible immediately; rename updates displayed name; archive removes it from the list; the same three list-mutating operations reflected against fake/in-memory IDB (matching existing `db/tags.test.ts` patterns).
 - `App.test.tsx`: extend for the new `'tags'` screen's push/pop navigation, following the existing chart-screen navigation tests' shape.
 - A one-time seeding test: opening the DB with zero existing tags results in exactly the 8 named tags, in order; opening it again (or with any pre-existing tag) does not duplicate or re-seed.
