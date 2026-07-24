@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import yahooFinance from 'yahoo-finance2';
-import { fmpSearch } from './_lib/fmp';
+import { fmpSearch } from './_lib/fmp.js';
 
 interface SymbolResult {
   symbol: string;
