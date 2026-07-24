@@ -39,7 +39,7 @@ export async function fmpQuote(symbol: string): Promise<FmpQuote> {
 }
 
 export async function fmpSearch(query: string): Promise<FmpSearchResult[]> {
-  const data = (await fmpFetch('search-symbol', { query })) as FmpSearchResult[];
+  const data = (await fmpFetch('search-name', { query })) as FmpSearchResult[];
   return data.map((r) => ({ symbol: r.symbol, name: r.name, exchange: r.exchange ?? '' }));
 }
 
