@@ -14,5 +14,6 @@ tsconfig.tsbuildinfo
 .vercel
 .env*
 
-# Local Claude Code permissions log - can accumulate secrets from command history.
+# Local Claude Code permission settings - kept per-machine, not shared via git.
 .claude/settings.local.json
+.claude/settings.json
