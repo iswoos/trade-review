@@ -58,6 +58,39 @@ describe('FMP client', () => {
     expect(results).toEqual([{ symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' }]);
   });
 
+  it('fmpQuote requests the stable quote endpoint with the symbol', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ symbol: 'AAPL', price: 320.27 }],
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await fmpQuote('AAPL');
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain('/stable/quote?');
+    expect(url).toContain('symbol=AAPL');
+  });
+
+  it('fmpSearch requests the stable search-name endpoint with the query', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' }],
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await fmpSearch('apple');
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain('/stable/search-name?');
+    expect(url).toContain('query=apple');
+  });
+
+  it('fmpHistory requests the stable historical-price-eod/light endpoint with the symbol', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal('fetch', fetchMock);
+    await fmpHistory('AAPL');
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain('/stable/historical-price-eod/light?');
+    expect(url).toContain('symbol=AAPL');
+  });
+
   it('fmpHistory reverses newest-first data to oldest-first', async () => {
     vi.stubGlobal(
       'fetch',
