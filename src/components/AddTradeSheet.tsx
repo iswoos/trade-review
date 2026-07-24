@@ -28,6 +28,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
   const [memo, setMemo] = useState('');
   const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
   const [datetimeUnknown, setDatetimeUnknown] = useState(false);
+  const [timeValue, setTimeValue] = useState('');
 
   useEffect(() => {
     fetchQuote(ticker).then((quote) => {
@@ -36,13 +37,28 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
     });
   }, [ticker]);
 
+  function toggleDatetimeUnknown() {
+    setDatetimeUnknown((prev) => {
+      const next = !prev;
+      if (next) {
+        setDatetimeValue('');
+        setTimeValue('');
+      } else {
+        setDatetimeValue(new Date().toISOString().slice(0, 10));
+      }
+      return next;
+    });
+  }
+
   async function handleSave() {
     const trade = await createTrade(db, {
       ticker,
       market: currency === 'KRW' ? 'KR' : 'US',
       name,
       currency,
-      datetime: datetimeUnknown ? null : new Date(datetimeValue).toISOString(),
+      datetime: datetimeUnknown
+        ? null
+        : new Date(timeValue ? `${datetimeValue}T${timeValue}` : datetimeValue).toISOString(),
       datetimeUnknown,
       side,
       price: Number(price),
@@ -116,10 +132,21 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           />
         </label>
+        <label className="text-xs text-zinc-500 dark:text-zinc-400">
+          체결 시각 (선택)
+          <input
+            aria-label="체결 시각"
+            type="time"
+            value={timeValue}
+            onChange={(e) => setTimeValue(e.target.value)}
+            disabled={datetimeUnknown}
+            className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+          />
+        </label>
         <button
           type="button"
           aria-pressed={datetimeUnknown}
-          onClick={() => setDatetimeUnknown((prev) => !prev)}
+          onClick={toggleDatetimeUnknown}
           className="self-start rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
         >
           시간 모름 / 예약매매
