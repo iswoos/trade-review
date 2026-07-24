@@ -64,6 +64,14 @@ export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   const trimmed = query.trim().toLowerCase();
   const matchedPositions = trimmed
     ? positions.filter((p) => p.ticker.toLowerCase().includes(trimmed) || p.name.toLowerCase().includes(trimmed))

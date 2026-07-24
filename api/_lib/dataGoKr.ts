@@ -49,9 +49,10 @@ async function dataGoKrFetch(params: Record<string, string>): Promise<DataGoKrSt
 }
 
 export async function dataGoKrQuote(symbol: string): Promise<{ symbol: string; price: number }> {
-  const rows = await dataGoKrFetch({ likeSrtnCd: stripKrSuffix(symbol), numOfRows: '1', pageNo: '1' });
+  const rows = await dataGoKrFetch({ likeSrtnCd: stripKrSuffix(symbol), numOfRows: '10', pageNo: '1' });
   if (!rows[0]) throw new Error(`data.go.kr quote returned no data for ${symbol}`);
-  return { symbol, price: Number(rows[0].clpr) };
+  const latest = rows.reduce((max, r) => (r.basDt > max.basDt ? r : max));
+  return { symbol, price: Number(latest.clpr.replace(/,/g, '')) };
 }
 
 export async function dataGoKrHistory(symbol: string): Promise<{ date: string; price: number }[]> {
@@ -69,6 +70,6 @@ export async function dataGoKrHistory(symbol: string): Promise<{ date: string; p
     .sort((a, b) => a.basDt.localeCompare(b.basDt))
     .map((r) => ({
       date: `${r.basDt.slice(0, 4)}-${r.basDt.slice(4, 6)}-${r.basDt.slice(6, 8)}`,
-      price: Number(r.clpr),
+      price: Number(r.clpr.replace(/,/g, '')),
     }));
 }

@@ -45,6 +45,31 @@ describe('dataGoKrQuote', () => {
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain('/GetStockSecuritiesInfoService/getStockPriceInfo?');
     expect(url).toContain('likeSrtnCd=005930');
+    expect(url).toContain('numOfRows=10');
+  });
+
+  it('picks the row with the maximum basDt even when the API returns rows in the wrong order', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        okResponse([
+          { basDt: '20250723', srtnCd: '005930', clpr: '60000' },
+          { basDt: '20260723', srtnCd: '005930', clpr: '71000' },
+          { basDt: '20260101', srtnCd: '005930', clpr: '65000' },
+        ])
+      )
+    );
+    const quote = await dataGoKrQuote('005930.KS');
+    expect(quote).toEqual({ symbol: '005930.KS', price: 71000 });
+  });
+
+  it('strips thousands-separator commas from clpr before parsing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(okResponse([{ basDt: '20260723', srtnCd: '005930', clpr: '71,000' }]))
+    );
+    const quote = await dataGoKrQuote('005930.KS');
+    expect(quote.price).toBe(71000);
   });
 
   it('throws when data.go.kr returns no rows', async () => {
