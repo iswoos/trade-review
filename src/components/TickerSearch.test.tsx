@@ -9,7 +9,10 @@ vi.mock('../api/quotes', async (importOriginal) => {
   return { ...actual, searchSymbols: vi.fn() };
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('TickerSearch', () => {
   it('groups matching held positions separately from new API search results', async () => {
@@ -29,7 +32,7 @@ describe('TickerSearch', () => {
     expect(await screen.findByRole('list', { name: '내 포지션 검색 결과' })).toBeInTheDocument();
     expect(await screen.findByRole('list', { name: '신규 검색 결과' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /조비 \(JOBY\)/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Joby Clone \(JOBY2\)/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Joby Clone \(JOBY2\)/ })).toBeInTheDocument();
   });
 
   it('calls onSelectTicker with the ticker and name, and clears the query, when a result is clicked', async () => {
@@ -91,7 +94,12 @@ describe('TickerSearch', () => {
     expect(screen.queryByRole('list', { name: '신규 검색 결과' })).not.toBeInTheDocument();
   });
 
-  it('ignores a stale out-of-order response so fast typing keeps the latest query results', async () => {
+  it('debounces rapid edits into a single call, and still ignores a stale out-of-order response', async () => {
+    vi.useFakeTimers();
+    // The mock is shared across every test in this file (no clearMocks/restoreMocks
+    // config), so earlier tests' calls to searchSymbols would otherwise leak into
+    // this test's call-count assertions.
+    vi.mocked(quotes.searchSymbols).mockClear();
     let resolveFirst!: (value: quotes.SymbolResult[]) => void;
     let resolveSecond!: (value: quotes.SymbolResult[]) => void;
 
@@ -100,14 +108,25 @@ describe('TickerSearch', () => {
       .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve; }));
 
     render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
-
     const input = screen.getByLabelText('종목 검색');
 
     fireEvent.change(input, { target: { value: 'j' } });
     fireEvent.change(input, { target: { value: 'jo' } });
 
-    // Resolve out of order: the later-typed query ("jo") resolves first,
-    // then the stale earlier query ("j") resolves after.
+    // Rapid "j" -> "jo" edit collapses into exactly one debounced call, for the final value.
+    await vi.advanceTimersByTimeAsync(300);
+    expect(quotes.searchSymbols).toHaveBeenCalledTimes(1);
+    expect(quotes.searchSymbols).toHaveBeenCalledWith('jo');
+
+    // A later, separately-debounced query.
+    fireEvent.change(input, { target: { value: 'joby' } });
+    await vi.advanceTimersByTimeAsync(300);
+    expect(quotes.searchSymbols).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+
+    // Resolve out of order: the later-issued query ("joby") resolves first,
+    // then the stale earlier query ("jo") resolves after.
     resolveSecond([{ symbol: 'JOBY', name: 'Joby Aviation', exchange: 'NYQ' }]);
     resolveFirst([{ symbol: 'JNJ', name: 'Johnson & Johnson', exchange: 'NYQ' }]);
 
