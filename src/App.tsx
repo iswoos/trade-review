@@ -76,7 +76,7 @@ export function App() {
   if (!db) return <p>불러오는 중...</p>;
 
   return (
-    <main>
+    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {screen === 'home' && (
         <HomeScreen
           db={db}

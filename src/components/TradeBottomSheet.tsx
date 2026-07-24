@@ -12,7 +12,7 @@ export function TradeBottomSheet({ trade, tags, onClose }: TradeBottomSheetProps
     .filter((name): name is string => Boolean(name));
 
   return (
-    <div role="dialog" aria-label="매매 상세">
+    <div role="dialog" aria-label="매매 상세" className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <p>
         {trade.side === 'buy' ? '매수' : '매도'} · {trade.price}
       </p>

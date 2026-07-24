@@ -5,7 +5,7 @@ interface ConvictionStarsProps {
 
 export function ConvictionStars({ value, onChange }: ConvictionStarsProps) {
   return (
-    <div role="radiogroup" aria-label="확신도">
+    <div role="radiogroup" aria-label="확신도" className="flex gap-1 text-lg text-amber-500">
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
