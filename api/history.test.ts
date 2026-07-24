@@ -35,8 +35,8 @@ describe('GET /api/history', () => {
             body: {
               items: {
                 item: [
-                  { basDt: '20260718', srtnCd: '005930', clpr: '72000' },
-                  { basDt: '20260717', srtnCd: '005930', clpr: '71000' },
+                  { basDt: '20260718', srtnCd: '005930', clpr: '72000', mkp: '71500', hipr: '72500', lopr: '71000' },
+                  { basDt: '20260717', srtnCd: '005930', clpr: '71000', mkp: '70500', hipr: '71500', lopr: '70000' },
                 ],
               },
               numOfRows: 2,

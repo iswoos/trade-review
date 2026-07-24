@@ -9,7 +9,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function okResponse(items: { basDt: string; srtnCd: string; clpr: string }[]) {
+function okResponse(
+  items: { basDt: string; srtnCd: string; clpr: string; mkp?: string; hipr?: string; lopr?: string }[]
+) {
   return {
     ok: true,
     json: async () => ({
@@ -102,25 +104,25 @@ describe('dataGoKrHistory', () => {
       'fetch',
       vi.fn().mockResolvedValue(
         okResponse([
-          { basDt: '20260718', srtnCd: '005930', clpr: '72000' },
-          { basDt: '20260717', srtnCd: '005930', clpr: '71000' },
+          { basDt: '20260718', srtnCd: '005930', clpr: '72000', mkp: '71500', hipr: '72500', lopr: '71000' },
+          { basDt: '20260717', srtnCd: '005930', clpr: '71000', mkp: '70500', hipr: '71500', lopr: '70000' },
         ])
       )
     );
     const bars = await dataGoKrHistory('005930.KS');
     expect(bars).toEqual([
-      { date: '2026-07-17', price: 71000 },
-      { date: '2026-07-18', price: 72000 },
+      { date: '2026-07-17', open: 70500, high: 71500, low: 70000, price: 71000 },
+      { date: '2026-07-18', open: 71500, high: 72500, low: 71000, price: 72000 },
     ]);
   });
 
   it('strips thousands-separator commas from clpr before parsing', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(okResponse([{ basDt: '20260718', srtnCd: '005930', clpr: '72,000' }]))
+      vi.fn().mockResolvedValue(okResponse([{ basDt: '20260718', srtnCd: '005930', clpr: '72,000', mkp: '71,500', hipr: '72,500', lopr: '71,000' }]))
     );
     const bars = await dataGoKrHistory('005930.KS');
-    expect(bars).toEqual([{ date: '2026-07-18', price: 72000 }]);
+    expect(bars).toEqual([{ date: '2026-07-18', open: 71500, high: 72500, low: 71000, price: 72000 }]);
   });
 
   it('requests a beginBasDt/endBasDt range with the KR suffix stripped', async () => {
@@ -131,5 +133,18 @@ describe('dataGoKrHistory', () => {
     expect(url).toContain('likeSrtnCd=005930');
     expect(url).toContain('beginBasDt=');
     expect(url).toContain('endBasDt=');
+  });
+
+  it('includes open/high/low alongside price (close)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        okResponse([
+          { basDt: '20260718', srtnCd: '005930', clpr: '72000', mkp: '71000', hipr: '73000', lopr: '70500' },
+        ])
+      )
+    );
+    const bars = await dataGoKrHistory('005930.KS');
+    expect(bars).toEqual([{ date: '2026-07-18', open: 71000, high: 73000, low: 70500, price: 72000 }]);
   });
 });
