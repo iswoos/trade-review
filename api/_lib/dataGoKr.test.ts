@@ -2,8 +2,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { dataGoKrQuote, dataGoKrHistory } from './dataGoKr';
 
-// @vitest-environment node
-
 beforeEach(() => {
   process.env.DATA_GO_KR_API_KEY = 'test-key';
 });
