@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { IDBPDatabase } from 'idb';
 import type { TradeReviewDB } from '../db/schema';
 import type { Tag, Trade } from '../types';
@@ -39,19 +39,28 @@ export function ChartScreen({
   const [selected, setSelected] = useState<Trade | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showListSheet, setShowListSheet] = useState(false);
+  const activeTickerRef = useRef(ticker);
 
   async function reload() {
-    const [ticketTrades, position] = await Promise.all([listTradesByTicker(db, ticker), getPosition(db, ticker)]);
+    const requestedTicker = ticker;
+    const [ticketTrades, position] = await Promise.all([
+      listTradesByTicker(db, requestedTicker),
+      getPosition(db, requestedTicker),
+    ]);
+    if (activeTickerRef.current !== requestedTicker) return;
     setTrades(ticketTrades);
     setAvgCost(position.totalQuantity !== 0 ? position.avgCost : null);
   }
 
   useEffect(() => {
+    activeTickerRef.current = ticker;
     setShowAddSheet(false);
     setShowListSheet(false);
     setSelected(null);
     reload();
-    fetchHistory(ticker).then(setHistory);
+    fetchHistory(ticker).then((bars) => {
+      if (activeTickerRef.current === ticker) setHistory(bars);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, ticker]);
 

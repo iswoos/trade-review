@@ -6,11 +6,18 @@ import { openTradeReviewDB, type TradeReviewDB } from '../db/schema';
 import { createTrade } from '../db/trades';
 import { ChartScreen } from './ChartScreen';
 import * as quotes from '../api/quotes';
+import * as tradesModule from '../db/trades';
 import type { PositionListItem } from '../lib/positionNav';
+import type { Trade } from '../types';
 
 vi.mock('../api/quotes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/quotes')>();
   return { ...actual, fetchHistory: vi.fn(), fetchQuote: vi.fn(), searchSymbols: vi.fn() };
+});
+
+vi.mock('../db/trades', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../db/trades')>();
+  return { ...actual, listTradesByTicker: vi.fn(actual.listTradesByTicker) };
 });
 
 vi.mock('lightweight-charts', () => ({
@@ -35,6 +42,38 @@ function item(overrides: Partial<PositionListItem> = {}): PositionListItem {
   };
 }
 
+function tradeFixture(overrides: Partial<Trade> = {}): Trade {
+  return {
+    id: crypto.randomUUID(),
+    ticker: 'JOBY',
+    market: 'US',
+    name: '조비',
+    currency: 'USD',
+    datetime: '2025-07-10T00:00:00.000Z',
+    datetimeUnknown: false,
+    side: 'buy',
+    price: 11.36,
+    quantityType: 'shares',
+    quantityValue: 100,
+    quantity: 100,
+    fxRateAtTrade: null,
+    rationaleTagIds: [],
+    conviction: null,
+    memo: '',
+    attachment: null,
+    recordedAt: '2025-07-10T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 beforeEach(async () => {
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase('trade-review');
@@ -46,6 +85,8 @@ beforeEach(async () => {
   vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2025-07-10', close: 11.36 }]);
   vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
   vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+  const actualTrades = await vi.importActual<typeof import('../db/trades')>('../db/trades');
+  vi.mocked(tradesModule.listTradesByTicker).mockImplementation(actualTrades.listTradesByTicker);
 });
 
 afterEach(() => db.close());
@@ -168,5 +209,52 @@ describe('ChartScreen', () => {
     await userEvent.click(await screen.findByRole('button', { name: /매수 11.36/ }));
 
     expect(await screen.findByRole('dialog', { name: '매매 상세' })).toBeInTheDocument();
+  });
+
+  it('discards a slow-to-resolve response for a ticker that is no longer displayed after a fast switch', async () => {
+    const aTrades = deferred<Trade[]>();
+    const bTrades = deferred<Trade[]>();
+    const promiseByTicker: Record<string, Promise<Trade[]>> = { AAPL: aTrades.promise, JOBY: bTrades.promise };
+    vi.mocked(tradesModule.listTradesByTicker).mockImplementation((_db, ticker) => promiseByTicker[ticker]);
+
+    const { rerender } = render(
+      <ChartScreen
+        db={db}
+        ticker="AAPL"
+        name="Apple Inc."
+        tags={[]}
+        positions={[]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={vi.fn()}
+      />
+    );
+
+    // Simulate clicking the nav arrow twice quickly: switch to JOBY before AAPL's request resolves.
+    rerender(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={vi.fn()}
+      />
+    );
+
+    // JOBY's (current ticker's) response arrives first...
+    bTrades.resolve([tradeFixture({ ticker: 'JOBY', price: 22.5 })]);
+    await userEvent.click(await screen.findByRole('button', { name: '매매 목록' }));
+    await screen.findByRole('dialog', { name: '매매 목록 시트' });
+    expect(await screen.findByRole('button', { name: /매수 22.5/ })).toBeInTheDocument();
+
+    // ...then AAPL's stale response resolves late and must be silently dropped.
+    aTrades.resolve([tradeFixture({ ticker: 'AAPL', price: 99.9 })]);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.queryByRole('button', { name: /매수 99.9/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /매수 22.5/ })).toBeInTheDocument();
   });
 });
