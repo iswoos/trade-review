@@ -44,6 +44,14 @@ describe('sortPositionItems', () => {
     sortPositionItems(items, 'alphabetical');
     expect(items.map((i) => i.ticker)).toEqual(['B', 'A']);
   });
+
+  it('breaks a tie in "recent" order using lastTradeRecordedAt when lastTradeAt is identical', () => {
+    const items = [
+      item({ ticker: 'A', lastTradeAt: '2025-01-01T00:00:00.000Z', lastTradeRecordedAt: '2025-01-01T00:05:00.000Z' }),
+      item({ ticker: 'B', lastTradeAt: '2025-01-01T00:00:00.000Z', lastTradeRecordedAt: '2025-01-01T00:10:00.000Z' }),
+    ];
+    expect(sortPositionItems(items, 'recent').map((i) => i.ticker)).toEqual(['B', 'A']);
+  });
 });
 
 describe('adjacentTicker', () => {

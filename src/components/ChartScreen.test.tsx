@@ -257,4 +257,24 @@ describe('ChartScreen', () => {
     expect(screen.queryByRole('button', { name: /매수 99.9/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /매수 22.5/ })).toBeInTheDocument();
   });
+
+  it('calls window.history.back() when the home button is clicked', async () => {
+    const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    render(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={vi.fn()}
+      />
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: '홈' }));
+    expect(backSpy).toHaveBeenCalledOnce();
+    backSpy.mockRestore();
+  });
 });

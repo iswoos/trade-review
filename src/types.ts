@@ -42,4 +42,5 @@ export interface Position {
   totalQuantity: number;
   avgCostHistory: { at: string; avgCost: number }[];
   realizedPl: number;
+  lastTradeRecordedAt: string;
 }

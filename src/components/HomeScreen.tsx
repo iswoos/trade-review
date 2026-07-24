@@ -1,16 +1,12 @@
-import type { IDBPDatabase } from 'idb';
-import type { TradeReviewDB } from '../db/schema';
 import { TickerSearch } from './TickerSearch';
-import { BackupControls } from './BackupControls';
+import { ThemeToggle } from './ThemeToggle';
 import { sortPositionItems, type PositionListItem, type SortOrder } from '../lib/positionNav';
 
 interface HomeScreenProps {
-  db: IDBPDatabase<TradeReviewDB>;
   positions: PositionListItem[];
   sortOrder: SortOrder;
   onSortOrderChange: (order: SortOrder) => void;
   onSelectTicker: (ticker: string, name: string) => void;
-  onImported: () => void;
 }
 
 const SORT_LABELS: Record<SortOrder, string> = {
@@ -19,7 +15,7 @@ const SORT_LABELS: Record<SortOrder, string> = {
   pnl: '평가손익순',
 };
 
-export function HomeScreen({ db, positions, sortOrder, onSortOrderChange, onSelectTicker, onImported }: HomeScreenProps) {
+export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTicker }: HomeScreenProps) {
   const sorted = sortPositionItems(positions, sortOrder);
 
   return (
@@ -28,9 +24,7 @@ export function HomeScreen({ db, positions, sortOrder, onSortOrderChange, onSele
         <div className="flex-1">
           <TickerSearch positions={positions} onSelectTicker={onSelectTicker} />
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          <BackupControls db={db} onImported={onImported} />
-        </div>
+        <ThemeToggle />
       </div>
 
       <div className="flex items-center justify-between px-1">

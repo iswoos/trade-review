@@ -45,6 +45,22 @@ export function App() {
     return () => db?.close();
   }, [db]);
 
+  useEffect(() => {
+    window.history.replaceState({ screen: 'home' }, '');
+    function handlePopState(event: PopStateEvent) {
+      const state = event.state as { screen: 'home' } | { screen: 'chart'; ticker: string; name: string } | null;
+      if (!state || state.screen === 'home') {
+        setScreen('home');
+        return;
+      }
+      setActiveTicker(state.ticker);
+      setActiveName(state.name);
+      setScreen('chart');
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const positionItems: PositionListItem[] = useMemo(
     () =>
       positions
@@ -54,12 +70,18 @@ export function App() {
           name: p.name,
           avgCost: p.avgCost,
           lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
+          lastTradeRecordedAt: p.lastTradeRecordedAt,
           currentPrice: prices[p.ticker] ?? null,
         })),
     [positions, prices]
   );
 
   function handleSelectTicker(ticker: string, name: string) {
+    if (screen === 'home') {
+      window.history.pushState({ screen: 'chart', ticker, name }, '');
+    } else {
+      window.history.replaceState({ screen: 'chart', ticker, name }, '');
+    }
     setActiveTicker(ticker);
     setActiveName(name);
     setScreen('chart');
@@ -69,24 +91,16 @@ export function App() {
     if (db) await reloadPositions(db);
   }
 
-  async function handleImported() {
-    if (!db) return;
-    setTags(await listActiveTags(db));
-    await reloadPositions(db);
-  }
-
   if (!db) return <p>불러오는 중...</p>;
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {screen === 'home' && (
         <HomeScreen
-          db={db}
           positions={positionItems}
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
           onSelectTicker={handleSelectTicker}
-          onImported={handleImported}
         />
       )}
       {screen === 'chart' && activeTicker && (
