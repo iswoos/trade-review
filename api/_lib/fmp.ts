@@ -1,7 +1,3 @@
-export function isKoreanSymbol(symbol: string): boolean {
-  return /\.(ks|kq)$/i.test(symbol);
-}
-
 interface FmpQuote {
   symbol: string;
   price: number;

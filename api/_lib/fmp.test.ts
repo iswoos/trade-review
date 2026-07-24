@@ -1,19 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isKoreanSymbol, fmpQuote, fmpSearch, fmpHistory } from './fmp';
-
-describe('isKoreanSymbol', () => {
-  it('returns true for .KS suffix', () => {
-    expect(isKoreanSymbol('005930.KS')).toBe(true);
-  });
-
-  it('returns true for .KQ suffix', () => {
-    expect(isKoreanSymbol('123456.KQ')).toBe(true);
-  });
-
-  it('returns false for US symbols', () => {
-    expect(isKoreanSymbol('AAPL')).toBe(false);
-  });
-});
+import { fmpQuote, fmpSearch, fmpHistory } from './fmp';
 
 describe('FMP client', () => {
   beforeEach(() => {

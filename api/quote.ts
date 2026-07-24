@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import yahooFinance from 'yahoo-finance2';
-import { isKoreanSymbol, fmpQuote } from './_lib/fmp.js';
+import { isKoreanSymbol } from './_lib/marketSymbol.js';
+import { fmpQuote } from './_lib/fmp.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const symbol = req.query.symbol;
