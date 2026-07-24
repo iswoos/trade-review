@@ -101,4 +101,43 @@ describe('App', () => {
     });
     expect(await screen.findByRole('list', { name: '신규 검색 결과' })).toBeInTheDocument();
   });
+
+  it('pressing the browser back button returns from the chart screen to the home screen', async () => {
+    render(<App />);
+    await userEvent.type(await screen.findByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+    await screen.findByTestId('price-chart');
+
+    window.history.back();
+
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+    expect(screen.queryByTestId('price-chart')).not.toBeInTheDocument();
+  });
+
+  it('clicking the home button in the chart screen navigates back to the home screen', async () => {
+    render(<App />);
+    await userEvent.type(await screen.findByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+    await screen.findByTestId('price-chart');
+
+    await userEvent.click(screen.getByRole('button', { name: '홈' }));
+
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+  });
+
+  it('switching tickers while already on the chart screen replaces history instead of stacking (one back returns to home)', async () => {
+    render(<App />);
+    await userEvent.type(await screen.findByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+    await screen.findByTestId('price-chart');
+
+    // still on the chart screen - select a result again (exercises the replaceState path)
+    await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+    await screen.findByTestId('price-chart');
+
+    window.history.back();
+
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+  });
 });

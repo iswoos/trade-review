@@ -45,6 +45,22 @@ export function App() {
     return () => db?.close();
   }, [db]);
 
+  useEffect(() => {
+    window.history.replaceState({ screen: 'home' }, '');
+    function handlePopState(event: PopStateEvent) {
+      const state = event.state as { screen: 'home' } | { screen: 'chart'; ticker: string; name: string } | null;
+      if (!state || state.screen === 'home') {
+        setScreen('home');
+        return;
+      }
+      setActiveTicker(state.ticker);
+      setActiveName(state.name);
+      setScreen('chart');
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const positionItems: PositionListItem[] = useMemo(
     () =>
       positions
@@ -60,6 +76,11 @@ export function App() {
   );
 
   function handleSelectTicker(ticker: string, name: string) {
+    if (screen === 'home') {
+      window.history.pushState({ screen: 'chart', ticker, name }, '');
+    } else {
+      window.history.replaceState({ screen: 'chart', ticker, name }, '');
+    }
     setActiveTicker(ticker);
     setActiveName(name);
     setScreen('chart');
