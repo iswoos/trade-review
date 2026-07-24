@@ -7,22 +7,43 @@ interface TickerSearchProps {
   onSelectTicker: (ticker: string, name: string) => void;
 }
 
+const SEARCH_DEBOUNCE_MS = 500;
+
 export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
   const [query, setQuery] = useState('');
   const [apiResults, setApiResults] = useState<SymbolResult[]>([]);
   const latestQueryRef = useRef('');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  async function handleChange(next: string) {
-    setQuery(next);
-    latestQueryRef.current = next;
-    const results = next.trim() ? await searchSymbols(next) : [];
+  async function runSearch(next: string) {
+    const results = await searchSymbols(next);
     if (latestQueryRef.current === next) {
       setApiResults(results);
     }
   }
 
+  function handleChange(next: string) {
+    setQuery(next);
+    latestQueryRef.current = next;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    if (!next.trim()) {
+      setApiResults([]);
+      return;
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      void runSearch(next);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
   function clearSearch() {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
     setQuery('');
     setApiResults([]);
     latestQueryRef.current = '';
@@ -41,6 +62,14 @@ export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
     }
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   const trimmed = query.trim().toLowerCase();
