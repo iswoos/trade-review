@@ -1,4 +1,5 @@
 import { TickerSearch } from './TickerSearch';
+import { ThemeToggle } from './ThemeToggle';
 import { sortPositionItems, type PositionListItem, type SortOrder } from '../lib/positionNav';
 
 interface HomeScreenProps {
@@ -19,7 +20,12 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
-      <TickerSearch positions={positions} onSelectTicker={onSelectTicker} />
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <TickerSearch positions={positions} onSelectTicker={onSelectTicker} />
+        </div>
+        <ThemeToggle />
+      </div>
 
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">보유 포지션</h2>
