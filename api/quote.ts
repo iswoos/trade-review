@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import yahooFinance from 'yahoo-finance2';
+import { isKoreanSymbol, fmpQuote } from './_lib/fmp.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const symbol = req.query.symbol;
@@ -8,12 +9,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
   try {
-    const quote = await yahooFinance.quote(symbol);
-    res.status(200).json({
-      symbol: quote.symbol,
-      price: quote.regularMarketPrice ?? null,
-      currency: quote.currency ?? null,
-    });
+    if (isKoreanSymbol(symbol)) {
+      const quote = await yahooFinance.quote(symbol);
+      res.status(200).json({
+        symbol: quote.symbol,
+        price: quote.regularMarketPrice ?? null,
+        currency: quote.currency ?? null,
+      });
+      return;
+    }
+    const quote = await fmpQuote(symbol);
+    res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'USD' });
   } catch {
     res.status(502).json({ error: 'Quote lookup failed' });
   }
