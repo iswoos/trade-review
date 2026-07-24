@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from '../db/schema';
@@ -125,8 +125,10 @@ describe('ChartScreen', () => {
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
     await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
 
-    expect(onTradeSaved).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(onTradeSaved).toHaveBeenCalledOnce();
+      expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument();
+    });
   });
 
   it("opens the trade-list sheet and shows a saved trade's detail on selection", async () => {
