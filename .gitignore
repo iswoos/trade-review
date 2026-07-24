@@ -13,3 +13,6 @@ dist/
 tsconfig.tsbuildinfo
 .vercel
 .env*
+
+# Local Claude Code permissions log - can accumulate secrets from command history.
+.claude/settings.local.json
