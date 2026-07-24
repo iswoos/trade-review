@@ -38,11 +38,11 @@ describe('GET /api/search', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it('merges KR bundled-listing matches with Twelve Data results', async () => {
+  it('merges KR bundled-listing matches with Twelve Data results for a non-Korean query', async () => {
     mockTwelveDataSearchOk({ data: [{ symbol: 'AAPL', instrument_name: 'Apple Inc', exchange: 'NASDAQ' }] });
 
     const res = mockRes();
-    await handler({ query: { q: '삼성' } } as any, res);
+    await handler({ query: { q: '005930' } } as any, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -57,7 +57,7 @@ describe('GET /api/search', () => {
     mockTwelveDataSearchFail();
 
     const res = mockRes();
-    await handler({ query: { q: '카카오' } } as any, res);
+    await handler({ query: { q: '035720' } } as any, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -72,5 +72,18 @@ describe('GET /api/search', () => {
     await handler({ query: { q: 'zzzznomatch' } } as any, res);
 
     expect(res.json).toHaveBeenCalledWith({ symbols: [] });
+  });
+
+  it('skips the Twelve Data call entirely for a Korean-language query', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = mockRes();
+    await handler({ query: { q: '삼성' } } as any, res);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      symbols: [{ symbol: '005930.KS', name: '삼성전자', exchange: 'KOSPI' }],
+    });
   });
 });
