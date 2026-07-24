@@ -1,0 +1,72 @@
+import { useRef, useState } from 'react';
+import { searchSymbols, type SymbolResult } from '../api/quotes';
+import type { PositionListItem } from '../lib/positionNav';
+
+interface TickerSearchProps {
+  positions: PositionListItem[];
+  onSelectTicker: (ticker: string, name: string) => void;
+}
+
+export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
+  const [query, setQuery] = useState('');
+  const [apiResults, setApiResults] = useState<SymbolResult[]>([]);
+  const latestQueryRef = useRef('');
+
+  async function handleChange(next: string) {
+    setQuery(next);
+    latestQueryRef.current = next;
+    const results = next.trim() ? await searchSymbols(next) : [];
+    if (latestQueryRef.current === next) {
+      setApiResults(results);
+    }
+  }
+
+  const trimmed = query.trim().toLowerCase();
+  const matchedPositions = trimmed
+    ? positions.filter((p) => p.ticker.toLowerCase().includes(trimmed) || p.name.toLowerCase().includes(trimmed))
+    : [];
+
+  return (
+    <div className="relative">
+      <input
+        aria-label="종목 검색"
+        value={query}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder="종목명 또는 티커 검색"
+        className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm shadow-zinc-900/5 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+      />
+      {trimmed && (
+        <div className="absolute z-10 mt-1 w-full rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+          {matchedPositions.length > 0 && (
+            <ul aria-label="내 포지션 검색 결과" className="flex flex-col gap-1">
+              {matchedPositions.map((p) => (
+                <li key={p.ticker}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTicker(p.ticker, p.name)}
+                    className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    {p.name} ({p.ticker})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <ul aria-label="신규 검색 결과" className="flex flex-col gap-1">
+            {apiResults.map((r) => (
+              <li key={r.symbol}>
+                <button
+                  type="button"
+                  onClick={() => onSelectTicker(r.symbol, r.name)}
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  {r.name} ({r.symbol})
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

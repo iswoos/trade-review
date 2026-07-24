@@ -36,13 +36,13 @@ export function BackupControls({ db, onImported }: BackupControlsProps) {
   }
 
   return (
-    <div>
-      <button type="button" onClick={handleExport}>
+    <div className="flex items-center gap-2 text-xs">
+      <button type="button" onClick={handleExport} className="rounded-xl px-2 py-1 text-zinc-500 dark:text-zinc-400">
         내보내기 (CSV)
       </button>
-      <label>
+      <label className="rounded-xl px-2 py-1 text-zinc-500 dark:text-zinc-400">
         CSV 가져오기
-        <input type="file" accept=".csv" aria-label="CSV 가져오기" onChange={handleImport} />
+        <input type="file" accept=".csv" aria-label="CSV 가져오기" onChange={handleImport} className="hidden" />
       </label>
     </div>
   );

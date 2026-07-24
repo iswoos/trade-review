@@ -7,7 +7,7 @@ import { simpleMovingAverage } from '../lib/movingAverage';
 interface PriceChartProps {
   history: HistoryBar[];
   trades: Trade[];
-  avgCost: number;
+  avgCost: number | null;
   onPointSelect: (trade: Trade) => void;
 }
 
@@ -45,8 +45,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       );
     }
 
-    const avgCostSeries = chart.addLineSeries({ color: '#ea580c', lineStyle: LineStyle.Dashed });
-    if (history.length > 0) {
+    if (avgCost != null && history.length > 0) {
+      const avgCostSeries = chart.addLineSeries({ color: '#ea580c', lineStyle: LineStyle.Dashed });
       avgCostSeries.setData([
         { time: history[0].date, value: avgCost },
         { time: history[history.length - 1].date, value: avgCost },

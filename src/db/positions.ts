@@ -3,6 +3,7 @@ import type { TradeReviewDB } from './schema';
 import type { Position, Trade } from '../types';
 import { EMPTY_POSITION_STATE, applyBuy, applySell } from '../lib/avgCost';
 import { listTradesByTicker } from './trades';
+import { listAllTrades } from './allTrades';
 
 function occurredAt(trade: Trade): string {
   return trade.datetime ?? trade.recordedAt;
@@ -33,4 +34,10 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
     avgCostHistory,
     realizedPl: state.realizedPl,
   };
+}
+
+export async function listPositions(db: IDBPDatabase<TradeReviewDB>): Promise<Position[]> {
+  const trades = await listAllTrades(db);
+  const tickers = [...new Set(trades.map((trade) => trade.ticker))];
+  return Promise.all(tickers.map((ticker) => getPosition(db, ticker)));
 }

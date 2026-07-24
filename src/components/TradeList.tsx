@@ -8,7 +8,7 @@ interface TradeListProps {
 
 export function TradeList({ trades, tags, onSelect }: TradeListProps) {
   return (
-    <ul aria-label="매매 목록">
+    <ul aria-label="매매 목록" className="flex flex-col gap-1">
       {trades.map((trade) => {
         const tagNames = trade.rationaleTagIds
           .map((id) => tags.find((tag) => tag.id === id)?.name)
@@ -17,7 +17,11 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
         const rationaleLabel = tagNames.length > 0 ? tagNames.join(', ') : '이 매매, 기억나는 이유가 있나요?';
         return (
           <li key={trade.id}>
-            <button type="button" onClick={() => onSelect(trade)}>
+            <button
+              type="button"
+              onClick={() => onSelect(trade)}
+              className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
               {dateLabel} · {trade.side === 'buy' ? '매수' : '매도'} {trade.price} · {rationaleLabel}
             </button>
           </li>
