@@ -31,7 +31,7 @@ describe('PriceChart', () => {
       addLineSeries: addLineSeriesSpy,
       subscribeClick: vi.fn(),
       remove: vi.fn(),
-    } as ReturnType<typeof createChart>);
+    } as unknown as ReturnType<typeof createChart>);
 
     render(
       <PriceChart history={[{ date: '2026-01-01', close: 10 }]} trades={[]} avgCost={null} onPointSelect={() => {}} />

@@ -48,12 +48,12 @@ describe('App', () => {
     // ChartScreen loads history/trades/position from separate async sources, so PriceChart's
     // effect can re-run more than once while data trickles in. Assert on whether a dashed
     // (avg-cost) series was ever added, not on a raw call count, which would be flaky here.
-    const addLineSeriesSpy = vi.fn(() => ({ setData: vi.fn(), setMarkers: vi.fn() }));
+    const addLineSeriesSpy = vi.fn((_options?: { lineStyle?: number }) => ({ setData: vi.fn(), setMarkers: vi.fn() }));
     vi.mocked(createChart).mockReturnValue({
       addLineSeries: addLineSeriesSpy,
       subscribeClick: vi.fn(),
       remove: vi.fn(),
-    } as ReturnType<typeof createChart>);
+    } as unknown as ReturnType<typeof createChart>);
     vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2026-01-01', close: 11.36 }]);
 
     function hasAvgCostLine() {
