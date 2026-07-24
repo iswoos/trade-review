@@ -28,7 +28,7 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
       </div>
 
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">보유 포지션</h2>
+        <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">보유 주식</h2>
         <label className="text-xs text-zinc-500 dark:text-zinc-400">
           정렬 기준
           <select
@@ -46,7 +46,7 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
         </label>
       </div>
 
-      <ul aria-label="보유 포지션 목록" className="flex flex-col gap-2.5">
+      <ul aria-label="보유 주식 목록" className="flex flex-col gap-2.5">
         {sorted.map((item) => {
           const pnlPercent =
             item.currentPrice != null && item.avgCost > 0

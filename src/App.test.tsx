@@ -110,7 +110,7 @@ describe('App', () => {
 
     window.history.back();
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
     expect(screen.queryByTestId('price-chart')).not.toBeInTheDocument();
   });
 
@@ -122,7 +122,7 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '홈' }));
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
   });
 
   it('switching tickers while already on the chart screen replaces history instead of stacking (one back returns to home)', async () => {
@@ -138,6 +138,6 @@ describe('App', () => {
 
     window.history.back();
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 포지션 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
   });
 });
