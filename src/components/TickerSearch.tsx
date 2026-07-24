@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { searchSymbols, type SymbolResult } from '../api/quotes';
 import type { PositionListItem } from '../lib/positionNav';
 
@@ -10,10 +10,15 @@ interface TickerSearchProps {
 export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
   const [query, setQuery] = useState('');
   const [apiResults, setApiResults] = useState<SymbolResult[]>([]);
+  const latestQueryRef = useRef('');
 
   async function handleChange(next: string) {
     setQuery(next);
-    setApiResults(next.trim() ? await searchSymbols(next) : []);
+    latestQueryRef.current = next;
+    const results = next.trim() ? await searchSymbols(next) : [];
+    if (latestQueryRef.current === next) {
+      setApiResults(results);
+    }
   }
 
   const trimmed = query.trim().toLowerCase();

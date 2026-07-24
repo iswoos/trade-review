@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TickerSearch } from './TickerSearch';
 import * as quotes from '../api/quotes';
@@ -55,5 +55,29 @@ describe('TickerSearch', () => {
     render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
     expect(screen.queryByRole('list', { name: '내 포지션 검색 결과' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: '신규 검색 결과' })).not.toBeInTheDocument();
+  });
+
+  it('ignores a stale out-of-order response so fast typing keeps the latest query results', async () => {
+    let resolveFirst!: (value: quotes.SymbolResult[]) => void;
+    let resolveSecond!: (value: quotes.SymbolResult[]) => void;
+
+    vi.mocked(quotes.searchSymbols)
+      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveSecond = resolve; }));
+
+    render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
+
+    const input = screen.getByLabelText('종목 검색');
+
+    fireEvent.change(input, { target: { value: 'j' } });
+    fireEvent.change(input, { target: { value: 'jo' } });
+
+    // Resolve out of order: the later-typed query ("jo") resolves first,
+    // then the stale earlier query ("j") resolves after.
+    resolveSecond([{ symbol: 'JOBY', name: 'Joby Aviation', exchange: 'NYQ' }]);
+    resolveFirst([{ symbol: 'JNJ', name: 'Johnson & Johnson', exchange: 'NYQ' }]);
+
+    expect(await screen.findByRole('button', { name: /Joby Aviation \(JOBY\)/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Johnson & Johnson \(JNJ\)/ })).not.toBeInTheDocument();
   });
 });
