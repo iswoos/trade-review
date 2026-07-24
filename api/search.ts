@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import krxListingData from '../src/data/krx-listing.json';
+import krxListingData from '../src/data/krx-listing.json' with { type: 'json' };
 import { searchKrxListing } from './_lib/krxListing.js';
 import { twelveDataSearch } from './_lib/twelveData.js';
 
