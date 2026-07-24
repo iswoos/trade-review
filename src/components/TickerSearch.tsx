@@ -7,7 +7,7 @@ interface TickerSearchProps {
   onSelectTicker: (ticker: string, name: string) => void;
 }
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 500;
 
 export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
   const [query, setQuery] = useState('');

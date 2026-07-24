@@ -114,13 +114,13 @@ describe('TickerSearch', () => {
     fireEvent.change(input, { target: { value: 'jo' } });
 
     // Rapid "j" -> "jo" edit collapses into exactly one debounced call, for the final value.
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(500);
     expect(quotes.searchSymbols).toHaveBeenCalledTimes(1);
     expect(quotes.searchSymbols).toHaveBeenCalledWith('jo');
 
     // A later, separately-debounced query.
     fireEvent.change(input, { target: { value: 'joby' } });
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(500);
     expect(quotes.searchSymbols).toHaveBeenCalledTimes(2);
 
     vi.useRealTimers();
