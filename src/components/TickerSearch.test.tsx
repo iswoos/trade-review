@@ -32,7 +32,7 @@ describe('TickerSearch', () => {
     expect(screen.getByRole('button', { name: /Joby Clone \(JOBY2\)/ })).toBeInTheDocument();
   });
 
-  it('calls onSelectTicker with the ticker and name when a result is clicked', async () => {
+  it('calls onSelectTicker with the ticker and name, and clears the query, when a result is clicked', async () => {
     vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
     const onSelectTicker = vi.fn();
 
@@ -45,10 +45,44 @@ describe('TickerSearch', () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText('종목 검색'), 'apple');
+    const input = screen.getByLabelText('종목 검색') as HTMLInputElement;
+    await userEvent.type(input, 'apple');
     await userEvent.click(await screen.findByRole('button', { name: /Apple Inc\. \(AAPL\)/ }));
 
     expect(onSelectTicker).toHaveBeenCalledWith('AAPL', 'Apple Inc.');
+    expect(input.value).toBe('');
+    expect(screen.queryByRole('list', { name: '내 포지션 검색 결과' })).not.toBeInTheDocument();
+  });
+
+  it('clears the query when the clear (X) button is clicked', async () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
+
+    const input = screen.getByLabelText('종목 검색') as HTMLInputElement;
+    await userEvent.type(input, 'apple');
+    await userEvent.click(await screen.findByRole('button', { name: '검색어 지우기' }));
+
+    expect(input.value).toBe('');
+    expect(screen.queryByRole('list', { name: '신규 검색 결과' })).not.toBeInTheDocument();
+  });
+
+  it('clears the query when clicking outside the search component', async () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    render(
+      <div>
+        <TickerSearch positions={[]} onSelectTicker={vi.fn()} />
+        <button type="button">바깥 영역</button>
+      </div>
+    );
+
+    const input = screen.getByLabelText('종목 검색') as HTMLInputElement;
+    await userEvent.type(input, 'apple');
+    await screen.findByRole('list', { name: '신규 검색 결과' });
+
+    await userEvent.click(screen.getByRole('button', { name: '바깥 영역' }));
+
+    expect(input.value).toBe('');
+    expect(screen.queryByRole('list', { name: '신규 검색 결과' })).not.toBeInTheDocument();
   });
 
   it('shows no result lists when the query is empty', () => {
