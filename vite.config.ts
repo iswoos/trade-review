@@ -7,9 +7,5 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     passWithNoTests: true,
-    environmentMatchGlobs: [
-      ['api/**', 'node'],
-      ['src/**', 'jsdom'],
-    ],
   },
 });
