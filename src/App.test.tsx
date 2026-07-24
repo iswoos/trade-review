@@ -73,4 +73,32 @@ describe('App', () => {
 
     await waitFor(() => expect(hasAvgCostLine()).toBe(true));
   });
+
+  it('excludes a fully-closed position (quantity sold back to zero) from being grouped as "내 포지션" in search', async () => {
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+
+    // buy 10 shares
+    await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument());
+
+    // sell all 10 shares to close the position
+    await userEvent.click(screen.getByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(screen.getByRole('button', { name: '매도' }));
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
+    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument());
+
+    // search again on the (still-mounted) chart screen's search bar - JOBY should no longer
+    // be grouped as a held position, only as a fresh API search result.
+    await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+    await waitFor(() => {
+      expect(screen.queryByRole('list', { name: '내 포지션 검색 결과' })).not.toBeInTheDocument();
+    });
+    expect(await screen.findByRole('list', { name: '신규 검색 결과' })).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from '../db/schema';
@@ -42,7 +42,7 @@ describe('AddTradeSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: '팩트' }));
     await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
 
-    expect(onSaved).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const saved = onSaved.mock.calls[0][0];
     expect(saved.ticker).toBe('JOBY');
     expect(saved.quantity).toBe(100);
@@ -57,7 +57,7 @@ describe('AddTradeSheet', () => {
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
     await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
 
-    expect(onSaved).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(onSaved.mock.calls[0][0].rationaleTagIds).toEqual([]);
   });
 
@@ -70,7 +70,7 @@ describe('AddTradeSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: '시간 모름 / 예약매매' }));
     await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
 
-    expect(onSaved).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const saved = onSaved.mock.calls[0][0];
     expect(saved.datetime).toBeNull();
     expect(saved.datetimeUnknown).toBe(true);

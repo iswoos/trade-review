@@ -47,13 +47,15 @@ export function App() {
 
   const positionItems: PositionListItem[] = useMemo(
     () =>
-      positions.map((p) => ({
-        ticker: p.ticker,
-        name: p.name,
-        avgCost: p.avgCost,
-        lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
-        currentPrice: prices[p.ticker] ?? null,
-      })),
+      positions
+        .filter((p) => p.totalQuantity !== 0)
+        .map((p) => ({
+          ticker: p.ticker,
+          name: p.name,
+          avgCost: p.avgCost,
+          lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
+          currentPrice: prices[p.ticker] ?? null,
+        })),
     [positions, prices]
   );
 
