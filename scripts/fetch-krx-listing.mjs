@@ -15,10 +15,15 @@ function suffixForMarket(mrktCtg) {
   return mrktCtg === 'KOSDAQ' ? '.KQ' : '.KS';
 }
 
-async function fetchPage(pageNo, numOfRows) {
+function formatBasDt(date) {
+  return date.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+async function fetchPage(basDt, pageNo, numOfRows) {
   const params = new URLSearchParams({
     serviceKey: API_KEY,
     resultType: 'json',
+    basDt,
     numOfRows: String(numOfRows),
     pageNo: String(pageNo),
   });
@@ -29,18 +34,37 @@ async function fetchPage(pageNo, numOfRows) {
   return res.json();
 }
 
+// This API's response is a historical daily log (one row per stock per trading
+// day, millions of rows total), not just "currently listed companies" — a
+// basDt filter is required to get a single day's snapshot. Walk backward from
+// today to find the most recent trading day with data (weekends/holidays have
+// none).
+async function fetchLatestSnapshot(numOfRows) {
+  const day = new Date();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const basDt = formatBasDt(day);
+    const first = await fetchPage(basDt, 1, numOfRows);
+    if (first.response.header.resultCode !== '00') {
+      throw new Error(`data.go.kr error: ${first.response.header.resultMsg}`);
+    }
+    if (first.response.body.totalCount > 0) {
+      return { basDt, first };
+    }
+    day.setDate(day.getDate() - 1);
+  }
+  throw new Error('최근 10일 내 거래일 데이터를 찾지 못했습니다.');
+}
+
 async function main() {
   const numOfRows = 1000;
-  const first = await fetchPage(1, numOfRows);
-  if (first.response.header.resultCode !== '00') {
-    throw new Error(`data.go.kr error: ${first.response.header.resultMsg}`);
-  }
+  const { basDt, first } = await fetchLatestSnapshot(numOfRows);
   const totalCount = first.response.body.totalCount;
   const rows = first.response.body.items === '' ? [] : first.response.body.items.item;
+  console.log(`기준일자(basDt): ${basDt}, 총 ${totalCount}개 종목`);
 
   const totalPages = Math.ceil(totalCount / numOfRows);
   for (let page = 2; page <= totalPages; page++) {
-    const next = await fetchPage(page, numOfRows);
+    const next = await fetchPage(basDt, page, numOfRows);
     const nextRows = next.response.body.items === '' ? [] : next.response.body.items.item;
     rows.push(...nextRows);
   }
@@ -48,7 +72,12 @@ async function main() {
   const seen = new Set();
   const listing = [];
   for (const row of rows) {
-    const symbol = `${row.srtnCd}${suffixForMarket(row.mrktCtg)}`;
+    // GetKrxListedInfoService prefixes every code with "A" (e.g. "A005930"),
+    // but GetStockSecuritiesInfoService (used for quote/history) identifies
+    // the same stock as plain "005930" — strip it so search results use the
+    // code the quote/history API actually recognizes.
+    const code = row.srtnCd.replace(/^A/, '');
+    const symbol = `${code}${suffixForMarket(row.mrktCtg)}`;
     if (seen.has(symbol)) continue;
     seen.add(symbol);
     listing.push({ symbol, name: row.itmsNm });
