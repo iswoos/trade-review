@@ -89,7 +89,7 @@ describe('fetchQuote caching', () => {
 
 describe('fetchHistory caching', () => {
   it('does not call fetch again for the same symbol within the cache TTL', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ bars: [{ date: '2026-07-17', close: 100 }] }) });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ bars: [{ date: '2026-07-17', open: 99, high: 101, low: 98, close: 100 }] }) });
     vi.stubGlobal('fetch', fetchMock);
 
     const first = await fetchHistory('CACHE_TEST_HISTORY_1');
