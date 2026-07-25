@@ -18,6 +18,22 @@ interface PriceChartProps {
   onPointSelect: (trade: Trade) => void;
 }
 
+function isDarkMode(): boolean {
+  return document.documentElement.classList.contains('dark');
+}
+
+function themeOptions(isDark: boolean) {
+  return isDark
+    ? {
+        layout: { background: { color: '#18181b' }, textColor: '#a1a1aa', attributionLogo: false },
+        grid: { vertLines: { color: '#27272a' }, horzLines: { color: '#27272a' } },
+      }
+    : {
+        layout: { background: { color: '#ffffff' }, textColor: '#71717a', attributionLogo: false },
+        grid: { vertLines: { color: '#e5e7eb' }, horzLines: { color: '#e5e7eb' } },
+      };
+}
+
 export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +45,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       width: container.clientWidth,
       height: 300,
       handleScroll: { horzTouchDrag: true },
+      ...themeOptions(isDarkMode()),
     });
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
@@ -88,7 +105,15 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       if (clicked) onPointSelect(clicked);
     });
 
-    return () => chart.remove();
+    const themeObserver = new MutationObserver(() => {
+      chart.applyOptions(themeOptions(isDarkMode()));
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => {
+      themeObserver.disconnect();
+      chart.remove();
+    };
   }, [history, trades, avgCost, onPointSelect]);
 
   return <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />;

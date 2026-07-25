@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 import { PriceChart } from './PriceChart';
@@ -15,6 +15,10 @@ vi.mock('lightweight-charts', () => ({
   LineSeries: {},
   LineStyle: { Dashed: 2 },
 }));
+
+afterEach(() => {
+  document.documentElement.classList.remove('dark');
+});
 
 describe('PriceChart', () => {
   it('renders a chart container without crashing', () => {
@@ -112,5 +116,57 @@ describe('PriceChart', () => {
     expect(markers).toEqual([
       expect.objectContaining({ shape: 'circle', color: '#10b981', size: 2 }),
     ]);
+  });
+
+  it('applies dark theme colors when the html element has the dark class on mount', () => {
+    vi.clearAllMocks();
+    document.documentElement.classList.add('dark');
+    const applyOptionsSpy = vi.fn();
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: applyOptionsSpy,
+      subscribeClick: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    const [createChartOptions] = vi.mocked(createChart).mock.calls[0].slice(1);
+    expect(createChartOptions).toMatchObject({
+      layout: { background: { color: '#18181b' }, textColor: '#a1a1aa', attributionLogo: false },
+    });
+  });
+
+  it('re-themes the chart when the dark class is toggled after mount', async () => {
+    const applyOptionsSpy = vi.fn();
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: applyOptionsSpy,
+      subscribeClick: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    document.documentElement.classList.add('dark');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(applyOptionsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ layout: expect.objectContaining({ background: { color: '#18181b' } }) })
+    );
   });
 });

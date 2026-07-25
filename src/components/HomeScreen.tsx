@@ -91,6 +91,15 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
           );
         })}
       </ul>
+
+      <a
+        href="https://www.tradingview.com/"
+        target="_blank"
+        rel="noreferrer"
+        className="text-center text-[0.65rem] text-zinc-400 dark:text-zinc-600"
+      >
+        Powered by TradingView Lightweight Charts
+      </a>
     </div>
   );
 }
