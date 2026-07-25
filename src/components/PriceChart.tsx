@@ -32,12 +32,12 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     });
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#2563eb',
-      downColor: '#dc2626',
-      borderUpColor: '#2563eb',
-      borderDownColor: '#dc2626',
-      wickUpColor: '#2563eb',
-      wickDownColor: '#dc2626',
+      upColor: '#dc2626',
+      downColor: '#2563eb',
+      borderUpColor: '#dc2626',
+      borderDownColor: '#2563eb',
+      wickUpColor: '#dc2626',
+      wickDownColor: '#2563eb',
     });
     candleSeries.setData(
       history.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
@@ -48,9 +48,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4 }[] = [
       { window: 5, color: '#94a3b8', lineWidth: 1 },
       { window: 20, color: '#f59e0b', lineWidth: 3 },
-      { window: 50, color: '#10b981', lineWidth: 1 },
+      { window: 50, color: '#8b5cf6', lineWidth: 1 },
       { window: 100, color: '#6366f1', lineWidth: 1 },
-      { window: 200, color: '#dc2626', lineWidth: 3 },
+      { window: 200, color: '#0d9488', lineWidth: 3 },
     ];
     for (const ma of MOVING_AVERAGES) {
       const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth });
@@ -76,8 +76,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         .map((t) => ({
           time: (t.datetime as string).slice(0, 10),
           position: t.side === 'buy' ? ('belowBar' as const) : ('aboveBar' as const),
-          color: t.side === 'buy' ? '#2563eb' : '#dc2626',
-          shape: t.side === 'buy' ? ('arrowUp' as const) : ('arrowDown' as const),
+          color: t.side === 'buy' ? '#10b981' : '#a855f7',
+          shape: 'circle' as const,
+          size: 2,
         }))
     );
 

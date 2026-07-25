@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 import { PriceChart } from './PriceChart';
 
 vi.mock('lightweight-charts', () => ({
@@ -71,5 +71,46 @@ describe('PriceChart', () => {
 
     const [seriesType] = addSeriesSpy.mock.calls[0];
     expect(seriesType).toBe(CandlestickSeries);
+  });
+
+  it('uses the final candle/MA color palette and circle markers for trades', () => {
+    vi.clearAllMocks();
+    const addSeriesSpy = vi.fn(() => ({ setData: vi.fn() }));
+    const createSeriesMarkersSpy = vi.mocked(createSeriesMarkers);
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: addSeriesSpy,
+      applyOptions: vi.fn(),
+      subscribeClick: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[
+          {
+            id: '1', ticker: 'JOBY', market: 'US', name: '조비', currency: 'USD',
+            datetime: '2026-01-01T00:00:00.000Z', datetimeUnknown: false, side: 'buy',
+            price: 11, quantityType: 'shares', quantityValue: 10, quantity: 10,
+            fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+            attachment: null, recordedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    const [, candleOptions] = addSeriesSpy.mock.calls[0];
+    expect(candleOptions).toMatchObject({ upColor: '#dc2626', downColor: '#2563eb' });
+
+    // Calls: [0]=candle, [1]=MA5, [2]=MA20, [3]=MA50, [4]=MA100, [5]=MA200
+    expect(addSeriesSpy.mock.calls[3][1]).toMatchObject({ color: '#8b5cf6' });
+    expect(addSeriesSpy.mock.calls[5][1]).toMatchObject({ color: '#0d9488' });
+
+    const [, markers] = createSeriesMarkersSpy.mock.calls[0];
+    expect(markers).toEqual([
+      expect.objectContaining({ shape: 'circle', color: '#10b981', size: 2 }),
+    ]);
   });
 });
