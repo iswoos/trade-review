@@ -703,6 +703,80 @@ describe('PriceChart', () => {
     expect(timeToCoordinate).toHaveBeenCalledWith('2026-07-13');
   });
 
+  it('buckets a trade dated on a holiday that shifted the week\'s first trading day later, to the correct (not previous) week', async () => {
+    const timeToCoordinate = vi.fn((time: string) => (time === '2026-07-14' ? 50 : null));
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    // Monday 2026-07-13 is a holiday (no bar) - the week's real first trading
+    // day is Tuesday 2026-07-14. A trade dated the holiday Monday itself
+    // must still land on that week's candle (07-14), not the prior week's.
+    const history = [
+      { date: '2026-07-06', open: 10, high: 11, low: 9, close: 10 }, // prior week
+      { date: '2026-07-14', open: 10, high: 12, low: 9, close: 11 }, // week of 7/13, first real bar
+      { date: '2026-07-15', open: 11, high: 13, low: 10, close: 12 },
+    ];
+    const trade = {
+      id: '1', ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetime: '2026-07-13T00:00:00.000Z', datetimeUnknown: false, side: 'buy' as const,
+      price: 11, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-07-13T00:00:00.000Z',
+    };
+
+    render(<PriceChart history={history} trades={[trade]} avgCost={null} onPointSelect={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: '주' }));
+
+    expect(await screen.findByRole('button', { name: '매수 2026-07-14' })).toBeInTheDocument();
+  });
+
+  it('does not render an arrow for a trade dated on a non-trading day in the default 일 (day) view', async () => {
+    const timeToCoordinate = vi.fn(() => null);
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    // 2026-07-18 is a Saturday - no bar exists for it. In the default day
+    // view this must NOT resolve to the nearest prior trading day (07-17);
+    // it must be dropped entirely, matching this app's pre-existing behavior.
+    const history = [
+      { date: '2026-07-17', open: 10, high: 12, low: 9, close: 11 },
+      { date: '2026-07-20', open: 11, high: 13, low: 10, close: 12 },
+    ];
+    const trade = {
+      id: '1', ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetime: '2026-07-18T00:00:00.000Z', datetimeUnknown: false, side: 'buy' as const,
+      price: 11, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-07-18T00:00:00.000Z',
+    };
+
+    render(<PriceChart history={history} trades={[trade]} avgCost={null} onPointSelect={() => {}} />);
+
+    expect(screen.queryByRole('button', { name: /매수/ })).not.toBeInTheDocument();
+  });
+
   it('fully recreates the chart (resetting any zoom/pan) when the period tab changes', async () => {
     vi.clearAllMocks();
     const firstRemove = vi.fn();

@@ -2,7 +2,8 @@ import type { HistoryBar } from '../api/quotes';
 
 export type AggregationPeriod = 'day' | 'week' | 'month' | 'year';
 
-function bucketKey(date: string, period: AggregationPeriod): string {
+export function bucketKey(date: string, period: AggregationPeriod): string {
+  if (period === 'day') return date;
   if (period === 'year') return date.slice(0, 4);
   if (period === 'month') return date.slice(0, 7);
   // week: Monday-start (Korean convention). getUTCDay(): 0=Sun..6=Sat;

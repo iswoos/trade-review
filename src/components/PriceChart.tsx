@@ -9,7 +9,7 @@ import {
 import type { HistoryBar } from '../api/quotes';
 import type { Trade } from '../types';
 import { simpleMovingAverage } from '../lib/movingAverage';
-import { aggregateBars, type AggregationPeriod } from '../lib/aggregateBars';
+import { aggregateBars, bucketKey, type AggregationPeriod } from '../lib/aggregateBars';
 
 interface PriceChartProps {
   history: HistoryBar[];
@@ -133,13 +133,14 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     // chart-native markers) decouples their position from price entirely and
     // gives each one its own tap target, so no distance/duration heuristic is
     // needed to tell a tap from a pan/zoom drag.
+    const bucketDateByKey = new Map<string, string>();
+    for (const bar of history) {
+      const key = bucketKey(bar.date, period);
+      if (!bucketDateByKey.has(key)) bucketDateByKey.set(key, bar.date);
+    }
+
     function bucketDateForTrade(tradeDate: string): string | undefined {
-      let match: string | undefined;
-      for (const bar of aggregated) {
-        if (bar.date <= tradeDate) match = bar.date;
-        else break;
-      }
-      return match;
+      return bucketDateByKey.get(bucketKey(tradeDate, period));
     }
 
     function computeArrows() {
