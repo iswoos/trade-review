@@ -1,18 +1,22 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { PriceChart } from './PriceChart';
 
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
     addSeries: vi.fn(() => ({ setData: vi.fn() })),
     applyOptions: vi.fn(),
-    subscribeClick: vi.fn(),
     priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-    timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+    timeScale: vi.fn(() => ({
+      setVisibleLogicalRange: vi.fn(),
+      getVisibleLogicalRange: vi.fn(),
+      timeToCoordinate: vi.fn(() => null),
+      subscribeVisibleLogicalRangeChange: vi.fn(),
+      unsubscribeVisibleLogicalRangeChange: vi.fn(),
+    })),
     remove: vi.fn(),
   })),
-  createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),
   CandlestickSeries: {},
   LineSeries: {},
   LineStyle: { Dashed: 2 },
@@ -40,9 +44,14 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -66,9 +75,14 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -88,16 +102,60 @@ describe('PriceChart', () => {
     ]);
   });
 
-  it('uses the final candle/MA color palette and circle markers for trades', () => {
+  it('uses the final candle/MA color palette and suppresses per-series price-axis badges', () => {
     vi.clearAllMocks();
     const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
-    const createSeriesMarkersSpy = vi.mocked(createSeriesMarkers);
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    const [, candleOptions] = addSeriesSpy.mock.calls[0];
+    expect(candleOptions).toMatchObject({ upColor: '#dc2626', downColor: '#2563eb' });
+
+    // Calls: [0]=candle, [1]=MA5, [2]=MA20, [3]=MA50, [4]=MA100, [5]=MA200
+    expect(addSeriesSpy.mock.calls[3][1]).toMatchObject({ color: '#8b5cf6' });
+    expect(addSeriesSpy.mock.calls[5][1]).toMatchObject({ color: '#0d9488' });
+
+    // Every MA series suppresses its own price-axis last-value badge — the
+    // top-right legend is the labeled replacement for this data, so the
+    // native per-series badges would just be redundant, unlabeled clutter.
+    for (let i = 1; i <= 5; i++) {
+      expect(addSeriesSpy.mock.calls[i][1]).toMatchObject({ lastValueVisible: false });
+    }
+  });
+
+  it('renders one arrow per trade below the time axis, colored red for buy and blue for sell', () => {
+    const timeToCoordinate = vi.fn((time: string) => (time === '2026-01-01' ? 120 : null));
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -118,29 +176,28 @@ describe('PriceChart', () => {
       />
     );
 
-    const [, candleOptions] = addSeriesSpy.mock.calls[0];
-    expect(candleOptions).toMatchObject({ upColor: '#dc2626', downColor: '#2563eb' });
-
-    // Calls: [0]=candle, [1]=MA5, [2]=MA20, [3]=MA50, [4]=MA100, [5]=MA200
-    expect(addSeriesSpy.mock.calls[3][1]).toMatchObject({ color: '#8b5cf6' });
-    expect(addSeriesSpy.mock.calls[5][1]).toMatchObject({ color: '#0d9488' });
-
-    // Every MA series suppresses its own price-axis last-value badge — the
-    // top-right legend is the labeled replacement for this data, so the
-    // native per-series badges would just be redundant, unlabeled clutter.
-    for (let i = 1; i <= 5; i++) {
-      expect(addSeriesSpy.mock.calls[i][1]).toMatchObject({ lastValueVisible: false });
-    }
-
-    const [, markers] = createSeriesMarkersSpy.mock.calls[0];
-    expect(markers).toEqual([
-      expect.objectContaining({ shape: 'circle', color: '#10b981', size: 2, text: '매수' }),
-    ]);
+    const arrow = screen.getByRole('button', { name: '매수 2026-01-01' });
+    expect(arrow).toHaveTextContent('▲');
+    expect(arrow).not.toHaveTextContent('×');
+    expect(arrow.style.color).toBe('rgb(220, 38, 38)'); // #dc2626
+    expect(arrow.style.left).toBe('120px');
   });
 
-  it('collapses same-day, same-side trades into a single marker with a count instead of stacking', () => {
-    const createSeriesMarkersSpy = vi.mocked(createSeriesMarkers);
-    createSeriesMarkersSpy.mockClear();
+  it('collapses same-day, same-side trades into a single arrow with a ×N count instead of stacking', () => {
+    const timeToCoordinate = vi.fn(() => 120);
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
 
     const baseTrade = {
       ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
@@ -162,56 +219,69 @@ describe('PriceChart', () => {
       />
     );
 
-    const [, markers] = createSeriesMarkersSpy.mock.calls[0];
-    expect(markers).toEqual([
-      expect.objectContaining({ position: 'belowBar', color: '#10b981', text: '매수 ×2' }),
-      expect.objectContaining({ position: 'aboveBar', color: '#a855f7', text: '매도' }),
-    ]);
+    const buyArrow = screen.getByRole('button', { name: '매수 2026-01-01' });
+    const sellArrow = screen.getByRole('button', { name: '매도 2026-01-01' });
+    expect(buyArrow).toHaveTextContent('▲ ×2');
+    expect(sellArrow).toHaveTextContent('▼');
+    expect(sellArrow).not.toHaveTextContent('×');
   });
 
-  it('suppresses the avg-cost line price-axis last-value badge too', () => {
-    vi.clearAllMocks();
-    const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
+  it('offsets buy and sell arrows apart when both fall on the same day, instead of overlapping', () => {
+    const timeToCoordinate = vi.fn(() => 120);
     vi.mocked(createChart).mockReturnValue({
-      addSeries: addSeriesSpy,
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
+
+    const baseTrade = {
+      ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetimeUnknown: false, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-01-01T00:00:00.000Z',
+    };
 
     render(
       <PriceChart
         history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
-        trades={[]}
-        avgCost={10.5}
+        trades={[
+          { ...baseTrade, id: '1', side: 'buy', price: 11, datetime: '2026-01-01T00:00:00.000Z' },
+          { ...baseTrade, id: '2', side: 'sell', price: 12, datetime: '2026-01-01T06:00:00.000Z' },
+        ]}
+        avgCost={null}
         onPointSelect={() => {}}
       />
     );
 
-    // Calls: [0]=candle, [1..5]=MAs, [6]=avg-cost line.
-    expect(addSeriesSpy.mock.calls[6][1]).toMatchObject({ lastValueVisible: false });
+    const buyArrow = screen.getByRole('button', { name: '매수 2026-01-01' });
+    const sellArrow = screen.getByRole('button', { name: '매도 2026-01-01' });
+    expect(buyArrow.style.left).toBe('112px'); // 120 - 8
+    expect(sellArrow.style.left).toBe('128px'); // 120 + 8
   });
 
-  it('selects the trade at the tapped coordinate when a plain tap lands outside both zoom regions', () => {
-    const coordinateToTime = vi.fn(() => '2026-01-01');
-    let containerEl!: HTMLDivElement;
-    vi.mocked(createChart).mockImplementation((el) => {
-      containerEl = el as HTMLDivElement;
-      return {
-        addSeries: vi.fn(() => ({ setData: vi.fn() })),
-        applyOptions: vi.fn(),
-        subscribeClick: vi.fn(),
-        priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-        timeScale: vi.fn(() => ({
-          setVisibleLogicalRange: vi.fn(),
-          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
-          coordinateToTime,
-        })),
-        remove: vi.fn(),
-      } as unknown as ReturnType<typeof createChart>;
-    });
+  it('calls onPointSelect with the matching trade when a trade arrow is clicked', () => {
+    const timeToCoordinate = vi.fn(() => 120);
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
 
     const trade = {
       id: '1', ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
@@ -231,69 +301,38 @@ describe('PriceChart', () => {
       />
     );
 
-    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
-      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
-    });
-
-    // Tap in the main plot area (not the right price-scale strip, not the bottom time-axis strip),
-    // with no meaningful movement between touchstart and touchend.
-    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
-    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 150, clientY: 150 }] });
-    containerEl.dispatchEvent(touchStart);
-
-    const touchEnd = new Event('touchend', { bubbles: true }) as unknown as TouchEvent;
-    Object.defineProperty(touchEnd, 'changedTouches', { value: [{ clientX: 151, clientY: 149 }] }); // 1-2px jitter, still counts as a tap
-    containerEl.dispatchEvent(touchEnd);
-
-    // Uses the touchend (lift-off) x-coordinate, not the touchstart x.
-    expect(coordinateToTime).toHaveBeenCalledWith(151);
+    fireEvent.click(screen.getByRole('button', { name: '매수 2026-01-01' }));
     expect(onPointSelect).toHaveBeenCalledWith(trade);
   });
 
-  it('does not select a trade when the touch moved too far to count as a tap', () => {
-    const coordinateToTime = vi.fn(() => '2026-01-01');
-    let containerEl!: HTMLDivElement;
-    vi.mocked(createChart).mockImplementation((el) => {
-      containerEl = el as HTMLDivElement;
-      return {
-        addSeries: vi.fn(() => ({ setData: vi.fn() })),
-        applyOptions: vi.fn(),
-        subscribeClick: vi.fn(),
-        priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-        timeScale: vi.fn(() => ({
-          setVisibleLogicalRange: vi.fn(),
-          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
-          coordinateToTime,
-        })),
-        remove: vi.fn(),
-      } as unknown as ReturnType<typeof createChart>;
-    });
+  it('suppresses the avg-cost line price-axis last-value badge too', () => {
+    vi.clearAllMocks();
+    const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: addSeriesSpy,
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
 
-    const onPointSelect = vi.fn();
     render(
       <PriceChart
         history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
         trades={[]}
-        avgCost={null}
-        onPointSelect={onPointSelect}
+        avgCost={10.5}
+        onPointSelect={() => {}}
       />
     );
 
-    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
-      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
-    });
-
-    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
-    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 150, clientY: 150 }] });
-    containerEl.dispatchEvent(touchStart);
-
-    // Moved 40px before lifting — a drag/scroll gesture, not a tap.
-    const touchEnd = new Event('touchend', { bubbles: true }) as unknown as TouchEvent;
-    Object.defineProperty(touchEnd, 'changedTouches', { value: [{ clientX: 190, clientY: 150 }] });
-    containerEl.dispatchEvent(touchEnd);
-
-    expect(coordinateToTime).not.toHaveBeenCalled();
-    expect(onPointSelect).not.toHaveBeenCalled();
+    // Calls: [0]=candle, [1..5]=MAs, [6]=avg-cost line.
+    expect(addSeriesSpy.mock.calls[6][1]).toMatchObject({ lastValueVisible: false });
   });
 
   it('applies dark theme colors when the html element has the dark class on mount', () => {
@@ -303,9 +342,14 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: applyOptionsSpy,
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -329,9 +373,14 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: applyOptionsSpy,
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -356,9 +405,14 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
-      subscribeClick: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -389,9 +443,14 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
-        subscribeClick: vi.fn(),
         priceScale,
-        timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })) })),
+        timeScale: vi.fn(() => ({
+          setVisibleLogicalRange: vi.fn(),
+          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
+          timeToCoordinate: vi.fn(() => null),
+          subscribeVisibleLogicalRangeChange: vi.fn(),
+          unsubscribeVisibleLogicalRangeChange: vi.fn(),
+        })),
         remove: vi.fn(),
       } as unknown as ReturnType<typeof createChart>;
     });
@@ -435,9 +494,14 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
-        subscribeClick: vi.fn(),
         priceScale,
-        timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })) })),
+        timeScale: vi.fn(() => ({
+          setVisibleLogicalRange: vi.fn(),
+          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
+          timeToCoordinate: vi.fn(() => null),
+          subscribeVisibleLogicalRangeChange: vi.fn(),
+          unsubscribeVisibleLogicalRangeChange: vi.fn(),
+        })),
         remove: vi.fn(),
       } as unknown as ReturnType<typeof createChart>;
     });
@@ -477,9 +541,14 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
-        subscribeClick: vi.fn(),
         priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
-        timeScale: vi.fn(() => ({ setVisibleLogicalRange, getVisibleLogicalRange })),
+        timeScale: vi.fn(() => ({
+          setVisibleLogicalRange,
+          getVisibleLogicalRange,
+          timeToCoordinate: vi.fn(() => null),
+          subscribeVisibleLogicalRangeChange: vi.fn(),
+          unsubscribeVisibleLogicalRangeChange: vi.fn(),
+        })),
         remove: vi.fn(),
       } as unknown as ReturnType<typeof createChart>;
     });

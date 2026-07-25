@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   createChart,
-  createSeriesMarkers,
   CandlestickSeries,
   LineSeries,
   LineStyle,
@@ -17,6 +16,19 @@ interface PriceChartProps {
   avgCost: number | null;
   onPointSelect: (trade: Trade) => void;
 }
+
+interface TradeArrow {
+  time: string;
+  side: Trade['side'];
+  count: number;
+  x: number;
+  offsetX: number;
+}
+
+const ARROW_COLOR: Record<Trade['side'], string> = { buy: '#dc2626', sell: '#2563eb' };
+// When a date has both a buy and a sell, nudge each arrow off-center so they
+// sit side by side instead of overlapping at the exact same x-coordinate.
+const BOTH_SIDES_OFFSET = 8;
 
 function isDarkMode(): boolean {
   return document.documentElement.classList.contains('dark');
@@ -37,6 +49,7 @@ function themeOptions(isDark: boolean) {
 export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
+  const [arrows, setArrows] = useState<TradeArrow[]>([]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -102,57 +115,48 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       ]);
     }
 
-    // Multiple same-day, same-side trades used to render as separate stacked
-    // markers; lightweight-charts offsets each additional marker on the same
-    // bar progressively further away, which read as an awkward, disconnected
-    // gap rather than a single event. Grouping by (date, side) keeps exactly
-    // one marker per bar per side.
-    const markerGroups = new Map<string, { time: string; side: Trade['side']; count: number }>();
-    for (const t of trades) {
-      if (!t.datetime) continue;
-      const time = t.datetime.slice(0, 10);
-      const key = `${time}|${t.side}`;
-      const existing = markerGroups.get(key);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        markerGroups.set(key, { time, side: t.side, count: 1 });
-      }
-    }
-
-    createSeriesMarkers(
-      candleSeries,
-      [...markerGroups.values()].map((group) => {
-        const label = group.side === 'buy' ? '매수' : '매도';
-        return {
-          time: group.time,
-          position: group.side === 'buy' ? ('belowBar' as const) : ('aboveBar' as const),
-          color: group.side === 'buy' ? '#10b981' : '#a855f7',
-          shape: 'circle' as const,
-          size: 2,
-          text: group.count > 1 ? `${label} ×${group.count}` : label,
-        };
-      })
-    );
-
     const rightScale = chart.priceScale('right');
     const timeScale = chart.timeScale();
     const TIME_AXIS_HEIGHT = 28;
+
+    // Trade markers used to render on the candle itself (belowBar/aboveBar),
+    // which lightweight-charts positions relative to the price scale — when
+    // multiple trades landed on the same bar, each extra marker was offset
+    // further away, reading as an awkward, disconnected gap. Rendering them
+    // as a separate arrow row below the time axis (real DOM elements, not
+    // chart-native markers) decouples their position from price entirely and
+    // gives each one its own tap target, so no distance/duration heuristic is
+    // needed to tell a tap from a pan/zoom drag.
+    function computeArrows() {
+      const groups = new Map<string, { buy: number; sell: number }>();
+      for (const t of trades) {
+        if (!t.datetime) continue;
+        const time = t.datetime.slice(0, 10);
+        const g = groups.get(time) ?? { buy: 0, sell: 0 };
+        g[t.side] += 1;
+        groups.set(time, g);
+      }
+      const next: TradeArrow[] = [];
+      for (const [time, g] of groups) {
+        const x = timeScale.timeToCoordinate(time);
+        if (x == null) continue;
+        const bothSides = g.buy > 0 && g.sell > 0;
+        if (g.buy > 0) {
+          next.push({ time, side: 'buy', count: g.buy, x, offsetX: bothSides ? -BOTH_SIDES_OFFSET : 0 });
+        }
+        if (g.sell > 0) {
+          next.push({ time, side: 'sell', count: g.sell, x, offsetX: bothSides ? BOTH_SIDES_OFFSET : 0 });
+        }
+      }
+      setArrows(next);
+    }
+    computeArrows();
+    timeScale.subscribeVisibleLogicalRangeChange(computeArrows);
 
     let dragMode: 'price' | 'time' | null = null;
     let dragStart: { x: number; y: number } | null = null;
     let dragStartPriceRange: { from: number; to: number } | null = null;
     let dragStartLogicalRange: { from: number; to: number } | null = null;
-    let tapStart: { x: number; y: number; time: number } | null = null;
-    const TAP_MAX_DISTANCE = 10;
-    const TAP_MAX_DURATION_MS = 500;
-
-    function selectTradeAtCoordinate(x: number) {
-      const time = timeScale.coordinateToTime(x);
-      if (time == null) return;
-      const clicked = trades.find((t) => t.datetime?.slice(0, 10) === time);
-      if (clicked) onPointSelect(clicked);
-    }
 
     function handleTouchStart(event: TouchEvent) {
       const touch = event.touches[0];
@@ -177,8 +181,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         dragMode = null;
       }
       dragStart = { x, y };
-      // Only a touch that starts outside both zoom regions can become a tap-to-select.
-      tapStart = dragMode === null ? { x, y, time: Date.now() } : null;
     }
 
     function handleTouchMove(event: TouchEvent) {
@@ -203,36 +205,16 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       }
     }
 
-    function handleTouchEnd(event: TouchEvent) {
-      if (tapStart) {
-        const touch = event.changedTouches[0];
-        if (touch) {
-          const rect = container!.getBoundingClientRect();
-          const x = touch.clientX - rect.left;
-          const y = touch.clientY - rect.top;
-          const distance = Math.hypot(x - tapStart.x, y - tapStart.y);
-          const duration = Date.now() - tapStart.time;
-          if (distance <= TAP_MAX_DISTANCE && duration <= TAP_MAX_DURATION_MS) {
-            selectTradeAtCoordinate(x);
-          }
-        }
-      }
+    function handleTouchEnd() {
       dragMode = null;
       dragStart = null;
       dragStartPriceRange = null;
       dragStartLogicalRange = null;
-      tapStart = null;
     }
 
     container.addEventListener('touchstart', handleTouchStart);
     container.addEventListener('touchmove', handleTouchMove);
     container.addEventListener('touchend', handleTouchEnd);
-
-    chart.subscribeClick((param) => {
-      if (!param.time) return;
-      const clicked = trades.find((t) => t.datetime?.slice(0, 10) === param.time);
-      if (clicked) onPointSelect(clicked);
-    });
 
     const themeObserver = new MutationObserver(() => {
       chart.applyOptions(themeOptions(isDarkMode()));
@@ -243,10 +225,16 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      timeScale.unsubscribeVisibleLogicalRangeChange(computeArrows);
       themeObserver.disconnect();
       chart.remove();
     };
   }, [history, trades, avgCost, onPointSelect]);
+
+  function selectArrowGroup(time: string, side: Trade['side']) {
+    const match = trades.find((t) => t.side === side && t.datetime?.slice(0, 10) === time);
+    if (match) onPointSelect(match);
+  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -259,6 +247,32 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           <div key={entry.label} style={{ color: entry.color }}>
             {entry.label} {entry.value}
           </div>
+        ))}
+      </div>
+      <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
+        {arrows.map((arrow) => (
+          <button
+            key={`${arrow.time}-${arrow.side}`}
+            type="button"
+            onClick={() => selectArrowGroup(arrow.time, arrow.side)}
+            aria-label={`${arrow.side === 'buy' ? '매수' : '매도'} ${arrow.time}`}
+            style={{
+              position: 'absolute',
+              left: arrow.x + arrow.offsetX,
+              transform: 'translateX(-50%)',
+              color: ARROW_COLOR[arrow.side],
+              fontSize: '0.7rem',
+              lineHeight: 1,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {arrow.side === 'buy' ? '▲' : '▼'}
+            {arrow.count > 1 ? ` ×${arrow.count}` : ''}
+          </button>
         ))}
       </div>
     </div>

@@ -5,4 +5,6 @@
 @theme {
   --color-accent: #10b981;
   --color-loss: #dc2626;
+  --color-buy: #dc2626;
+  --color-sell: #2563eb;
 }

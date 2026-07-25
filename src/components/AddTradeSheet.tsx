@@ -92,7 +92,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             onClick={() => setSide('buy')}
             className={
               side === 'buy'
-                ? 'flex-1 rounded-xl bg-accent py-2 text-sm font-bold text-white'
+                ? 'flex-1 rounded-xl bg-buy py-2 text-sm font-bold text-white'
                 : 'flex-1 rounded-xl border border-zinc-200 py-2 text-sm font-bold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300'
             }
           >
@@ -104,7 +104,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             onClick={() => setSide('sell')}
             className={
               side === 'sell'
-                ? 'flex-1 rounded-xl bg-loss py-2 text-sm font-bold text-white'
+                ? 'flex-1 rounded-xl bg-sell py-2 text-sm font-bold text-white'
                 : 'flex-1 rounded-xl border border-zinc-200 py-2 text-sm font-bold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300'
             }
           >
