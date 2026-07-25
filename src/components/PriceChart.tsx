@@ -9,6 +9,7 @@ import {
 import type { HistoryBar } from '../api/quotes';
 import type { Trade } from '../types';
 import { simpleMovingAverage } from '../lib/movingAverage';
+import { aggregateBars, type AggregationPeriod } from '../lib/aggregateBars';
 
 interface PriceChartProps {
   history: HistoryBar[];
@@ -30,6 +31,8 @@ const ARROW_COLOR: Record<Trade['side'], string> = { buy: '#dc2626', sell: '#256
 // sit side by side instead of overlapping at the exact same x-coordinate.
 const BOTH_SIDES_OFFSET = 8;
 
+const PERIOD_LABELS: Record<AggregationPeriod, string> = { day: '일', week: '주', month: '월', year: '년' };
+
 function isDarkMode(): boolean {
   return document.documentElement.classList.contains('dark');
 }
@@ -50,10 +53,13 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   const containerRef = useRef<HTMLDivElement>(null);
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
   const [arrows, setArrows] = useState<TradeArrow[]>([]);
+  const [period, setPeriod] = useState<AggregationPeriod>('day');
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const aggregated = aggregateBars(history, period);
 
     const chart: IChartApi = createChart(container, {
       width: container.clientWidth,
@@ -71,17 +77,17 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       wickDownColor: '#2563eb',
     });
     candleSeries.setData(
-      history.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
+      aggregated.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
     );
 
-    const closeValues = history.map((bar) => bar.close);
+    const closeValues = aggregated.map((bar) => bar.close);
     // ADR-0008: MA cap expanded from 1~2 (20/60일) to 5 (5/20/50/100/200일); 20일·200일 emphasized (lineWidth 3 vs 1).
-    const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4; label: string }[] = [
-      { window: 5, color: '#94a3b8', lineWidth: 1, label: '5일' },
-      { window: 20, color: '#f59e0b', lineWidth: 3, label: '20일' },
-      { window: 50, color: '#8b5cf6', lineWidth: 1, label: '50일' },
-      { window: 100, color: '#6366f1', lineWidth: 1, label: '100일' },
-      { window: 200, color: '#0d9488', lineWidth: 3, label: '200일' },
+    const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4 }[] = [
+      { window: 5, color: '#94a3b8', lineWidth: 1 },
+      { window: 20, color: '#f59e0b', lineWidth: 3 },
+      { window: 50, color: '#8b5cf6', lineWidth: 1 },
+      { window: 100, color: '#6366f1', lineWidth: 1 },
+      { window: 200, color: '#0d9488', lineWidth: 3 },
     ];
     const legendEntries: { label: string; color: string; value: number }[] = [];
     for (const ma of MOVING_AVERAGES) {
@@ -93,25 +99,25 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       const maValues = simpleMovingAverage(closeValues, ma.window);
       series.setData(
         maValues
-          .map((value, i) => ({ time: history[i].date, value }))
+          .map((value, i) => ({ time: aggregated[i].date, value }))
           .filter((point): point is { time: string; value: number } => point.value != null)
       );
       const latest = [...maValues].reverse().find((value): value is number => value != null);
       if (latest != null) {
-        legendEntries.push({ label: ma.label, color: ma.color, value: latest });
+        legendEntries.push({ label: `${ma.window}${PERIOD_LABELS[period]}`, color: ma.color, value: latest });
       }
     }
     setLegend(legendEntries);
 
-    if (avgCost != null && history.length > 0) {
+    if (avgCost != null && aggregated.length > 0) {
       const avgCostSeries = chart.addSeries(LineSeries, {
         color: '#ea580c',
         lineStyle: LineStyle.Dashed,
         lastValueVisible: false,
       });
       avgCostSeries.setData([
-        { time: history[0].date, value: avgCost },
-        { time: history[history.length - 1].date, value: avgCost },
+        { time: aggregated[0].date, value: avgCost },
+        { time: aggregated[aggregated.length - 1].date, value: avgCost },
       ]);
     }
 
@@ -127,11 +133,21 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     // chart-native markers) decouples their position from price entirely and
     // gives each one its own tap target, so no distance/duration heuristic is
     // needed to tell a tap from a pan/zoom drag.
+    function bucketDateForTrade(tradeDate: string): string | undefined {
+      let match: string | undefined;
+      for (const bar of aggregated) {
+        if (bar.date <= tradeDate) match = bar.date;
+        else break;
+      }
+      return match;
+    }
+
     function computeArrows() {
       const groups = new Map<string, { buy: number; sell: number }>();
       for (const t of trades) {
         if (!t.datetime) continue;
-        const time = t.datetime.slice(0, 10);
+        const time = bucketDateForTrade(t.datetime.slice(0, 10));
+        if (!time) continue;
         const g = groups.get(time) ?? { buy: 0, sell: 0 };
         g[t.side] += 1;
         groups.set(time, g);
@@ -229,7 +245,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       themeObserver.disconnect();
       chart.remove();
     };
-  }, [history, trades, avgCost, onPointSelect]);
+  }, [history, trades, avgCost, onPointSelect, period]);
 
   function selectArrowGroup(time: string, side: Trade['side']) {
     const match = trades.find((t) => t.side === side && t.datetime?.slice(0, 10) === time);
@@ -237,43 +253,62 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />
-      <div
-        data-testid="ma-legend"
-        style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.65rem', textAlign: 'right', pointerEvents: 'none' }}
-      >
-        {legend.map((entry) => (
-          <div key={entry.label} style={{ color: entry.color }}>
-            {entry.label} {entry.value}
-          </div>
-        ))}
-      </div>
-      <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
-        {arrows.map((arrow) => (
+    <div>
+      <div role="radiogroup" aria-label="봉 단위" className="mb-1 flex gap-2">
+        {(Object.keys(PERIOD_LABELS) as AggregationPeriod[]).map((p) => (
           <button
-            key={`${arrow.time}-${arrow.side}`}
+            key={p}
             type="button"
-            onClick={() => selectArrowGroup(arrow.time, arrow.side)}
-            aria-label={`${arrow.side === 'buy' ? '매수' : '매도'} ${arrow.time}`}
-            style={{
-              position: 'absolute',
-              left: arrow.x + arrow.offsetX,
-              transform: 'translateX(-50%)',
-              color: ARROW_COLOR[arrow.side],
-              fontSize: '0.7rem',
-              lineHeight: 1,
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
+            aria-pressed={period === p}
+            onClick={() => setPeriod(p)}
+            className={
+              period === p
+                ? 'flex-1 rounded-xl bg-zinc-900 py-1.5 text-xs font-bold text-white dark:bg-zinc-50 dark:text-zinc-900'
+                : 'flex-1 rounded-xl border border-zinc-200 py-1.5 text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300'
+            }
           >
-            {arrow.side === 'buy' ? '▲' : '▼'}
-            {arrow.count > 1 ? ` ×${arrow.count}` : ''}
+            {PERIOD_LABELS[p]}
           </button>
         ))}
+      </div>
+      <div style={{ position: 'relative' }}>
+        <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />
+        <div
+          data-testid="ma-legend"
+          style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.65rem', textAlign: 'right', pointerEvents: 'none' }}
+        >
+          {legend.map((entry) => (
+            <div key={entry.label} style={{ color: entry.color }}>
+              {entry.label} {entry.value}
+            </div>
+          ))}
+        </div>
+        <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
+          {arrows.map((arrow) => (
+            <button
+              key={`${arrow.time}-${arrow.side}`}
+              type="button"
+              onClick={() => selectArrowGroup(arrow.time, arrow.side)}
+              aria-label={`${arrow.side === 'buy' ? '매수' : '매도'} ${arrow.time}`}
+              style={{
+                position: 'absolute',
+                left: arrow.x + arrow.offsetX,
+                transform: 'translateX(-50%)',
+                color: ARROW_COLOR[arrow.side],
+                fontSize: '0.7rem',
+                lineHeight: 1,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {arrow.side === 'buy' ? '▲' : '▼'}
+              {arrow.count > 1 ? ` ×${arrow.count}` : ''}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
