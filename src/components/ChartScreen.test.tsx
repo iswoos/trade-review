@@ -25,6 +25,8 @@ vi.mock('lightweight-charts', () => ({
     addSeries: vi.fn(() => ({ setData: vi.fn() })),
     applyOptions: vi.fn(),
     subscribeClick: vi.fn(),
+    priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+    timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
     remove: vi.fn(),
   })),
   createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),

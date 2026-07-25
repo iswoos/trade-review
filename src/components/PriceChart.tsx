@@ -107,6 +107,68 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         }))
     );
 
+    const rightScale = chart.priceScale('right');
+    const timeScale = chart.timeScale();
+    const TIME_AXIS_HEIGHT = 28;
+
+    let dragMode: 'price' | 'time' | null = null;
+    let dragStart: { x: number; y: number } | null = null;
+    let dragStartPriceRange: { from: number; to: number } | null = null;
+    let dragStartLogicalRange: { from: number; to: number } | null = null;
+
+    function handleTouchStart(event: TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch) return;
+      const rect = container!.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      if (x >= rect.width - rightScale.width()) {
+        dragMode = 'price';
+        rightScale.setAutoScale(false);
+        dragStartPriceRange = rightScale.getVisibleRange();
+      } else if (y >= rect.height - TIME_AXIS_HEIGHT) {
+        dragMode = 'time';
+        dragStartLogicalRange = timeScale.getVisibleLogicalRange();
+      } else {
+        dragMode = null;
+      }
+      dragStart = { x, y };
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch || !dragMode || !dragStart) return;
+      const rect = container!.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      if (dragMode === 'price' && dragStartPriceRange) {
+        const deltaY = y - dragStart.y;
+        const scale = 1 + deltaY / rect.height;
+        const mid = (dragStartPriceRange.from + dragStartPriceRange.to) / 2;
+        const halfSpan = ((dragStartPriceRange.to - dragStartPriceRange.from) / 2) * scale;
+        rightScale.setVisibleRange({ from: mid - halfSpan, to: mid + halfSpan });
+      } else if (dragMode === 'time' && dragStartLogicalRange) {
+        const deltaX = x - dragStart.x;
+        const scale = 1 + deltaX / rect.width;
+        const mid = (dragStartLogicalRange.from + dragStartLogicalRange.to) / 2;
+        const halfSpan = ((dragStartLogicalRange.to - dragStartLogicalRange.from) / 2) * scale;
+        timeScale.setVisibleLogicalRange({ from: mid - halfSpan, to: mid + halfSpan });
+      }
+    }
+
+    function handleTouchEnd() {
+      dragMode = null;
+      dragStart = null;
+      dragStartPriceRange = null;
+      dragStartLogicalRange = null;
+    }
+
+    container.addEventListener('touchstart', handleTouchStart);
+    container.addEventListener('touchmove', handleTouchMove);
+    container.addEventListener('touchend', handleTouchEnd);
+
     chart.subscribeClick((param) => {
       if (!param.time) return;
       const clicked = trades.find((t) => t.datetime?.slice(0, 10) === param.time);
@@ -119,6 +181,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
       themeObserver.disconnect();
       chart.remove();
     };

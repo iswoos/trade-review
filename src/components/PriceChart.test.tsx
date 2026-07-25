@@ -8,6 +8,8 @@ vi.mock('lightweight-charts', () => ({
     addSeries: vi.fn(() => ({ setData: vi.fn() })),
     applyOptions: vi.fn(),
     subscribeClick: vi.fn(),
+    priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+    timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
     remove: vi.fn(),
   })),
   createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),
@@ -39,6 +41,8 @@ describe('PriceChart', () => {
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -61,6 +65,8 @@ describe('PriceChart', () => {
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -85,6 +91,8 @@ describe('PriceChart', () => {
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -126,6 +134,8 @@ describe('PriceChart', () => {
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: applyOptionsSpy,
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -150,6 +160,8 @@ describe('PriceChart', () => {
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: applyOptionsSpy,
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -175,6 +187,8 @@ describe('PriceChart', () => {
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
 
@@ -192,5 +206,92 @@ describe('PriceChart', () => {
     // 5-day MA over closes [10,11,12,13,14] = 12, on the only day it has enough data (the 5th bar).
     expect(legend).toHaveTextContent('5일');
     expect(legend).toHaveTextContent('12');
+  });
+
+  it('zooms only the price scale when a touch drag starts in the price-axis region', () => {
+    const setAutoScale = vi.fn();
+    const setVisibleRange = vi.fn();
+    const getVisibleRange = vi.fn(() => ({ from: 0, to: 100 }));
+    const priceScale = vi.fn(() => ({ width: () => 50, setAutoScale, setVisibleRange, getVisibleRange }));
+    let containerEl!: HTMLDivElement;
+    vi.mocked(createChart).mockImplementation((el) => {
+      containerEl = el as HTMLDivElement;
+      return {
+        addSeries: vi.fn(() => ({ setData: vi.fn() })),
+        applyOptions: vi.fn(),
+        subscribeClick: vi.fn(),
+        priceScale,
+        timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })) })),
+        remove: vi.fn(),
+      } as unknown as ReturnType<typeof createChart>;
+    });
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    // jsdom's getBoundingClientRect() always returns zeros regardless of clientWidth/clientHeight —
+    // mock it directly so the region-detection math in PriceChart has real width/height to work with.
+    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
+    });
+
+    // Touch starting inside the rightmost 50px (the price-scale width) at y=100 (not in the bottom 28px).
+    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 280, clientY: 100 }] });
+    containerEl.dispatchEvent(touchStart);
+
+    const touchMove = new Event('touchmove', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchMove, 'touches', { value: [{ clientX: 280, clientY: 60 }] });
+    containerEl.dispatchEvent(touchMove);
+
+    expect(setAutoScale).toHaveBeenCalledWith(false);
+    expect(setVisibleRange).toHaveBeenCalled();
+  });
+
+  it('zooms only the time scale when a touch drag starts in the time-axis region', () => {
+    const setVisibleLogicalRange = vi.fn();
+    const getVisibleLogicalRange = vi.fn(() => ({ from: 0, to: 10 }));
+    let containerEl!: HTMLDivElement;
+    vi.mocked(createChart).mockImplementation((el) => {
+      containerEl = el as HTMLDivElement;
+      return {
+        addSeries: vi.fn(() => ({ setData: vi.fn() })),
+        applyOptions: vi.fn(),
+        subscribeClick: vi.fn(),
+        priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+        timeScale: vi.fn(() => ({ setVisibleLogicalRange, getVisibleLogicalRange })),
+        remove: vi.fn(),
+      } as unknown as ReturnType<typeof createChart>;
+    });
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
+    });
+
+    // Touch starting in the bottom 28px (time-axis region), away from the right price-scale column.
+    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 100, clientY: 290 }] });
+    containerEl.dispatchEvent(touchStart);
+
+    const touchMove = new Event('touchmove', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchMove, 'touches', { value: [{ clientX: 160, clientY: 290 }] });
+    containerEl.dispatchEvent(touchMove);
+
+    expect(setVisibleLogicalRange).toHaveBeenCalled();
   });
 });
