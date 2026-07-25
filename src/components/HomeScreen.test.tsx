@@ -58,4 +58,12 @@ describe('HomeScreen', () => {
 
     expect(onSelectTicker).toHaveBeenCalledWith('JOBY', '조비');
   });
+
+  it('shows the lightweight-charts attribution link', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    render(<HomeScreen positions={[]} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} />);
+
+    const link = screen.getByRole('link', { name: /TradingView Lightweight Charts/ });
+    expect(link).toHaveAttribute('href', 'https://www.tradingview.com/');
+  });
 });

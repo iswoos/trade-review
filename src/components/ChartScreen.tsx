@@ -38,7 +38,6 @@ export function ChartScreen({
   const [history, setHistory] = useState<HistoryBar[]>([]);
   const [selected, setSelected] = useState<Trade | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
-  const [showListSheet, setShowListSheet] = useState(false);
   const activeTickerRef = useRef(ticker);
 
   async function reload() {
@@ -55,7 +54,6 @@ export function ChartScreen({
   useEffect(() => {
     activeTickerRef.current = ticker;
     setShowAddSheet(false);
-    setShowListSheet(false);
     setSelected(null);
     reload();
     fetchHistory(ticker).then((bars) => {
@@ -121,22 +119,15 @@ export function ChartScreen({
         <PriceChart history={history} trades={trades} avgCost={avgCost} onPointSelect={setSelected} />
       </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setShowAddSheet(true)}
-          className="flex-1 rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]"
-        >
-          + 매매 기록 추가
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowListSheet(true)}
-          className="flex-1 rounded-xl border border-zinc-200 bg-white py-3 text-sm font-bold text-zinc-900 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
-        >
-          매매 목록
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowAddSheet(true)}
+        className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]"
+      >
+        + 매매 기록 추가
+      </button>
+
+      <TradeList trades={trades} tags={tags} onSelect={setSelected} />
 
       {showAddSheet && (
         <div className="fixed inset-0 z-20 flex items-end bg-zinc-900/40">
@@ -153,26 +144,11 @@ export function ChartScreen({
         </div>
       )}
 
-      {showListSheet && (
+      {selected && (
         <div className="fixed inset-0 z-20 flex items-end bg-zinc-900/40">
-          <div
-            role="dialog"
-            aria-label="매매 목록 시트"
-            className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 dark:bg-zinc-900"
-          >
-            <button
-              type="button"
-              onClick={() => setShowListSheet(false)}
-              className="mb-2 rounded-xl px-3 py-1 text-sm text-zinc-500 dark:text-zinc-400"
-            >
-              닫기
-            </button>
-            <TradeList trades={trades} tags={tags} onSelect={setSelected} />
-          </div>
+          <TradeBottomSheet trade={selected} tags={tags} onClose={() => setSelected(null)} />
         </div>
       )}
-
-      {selected && <TradeBottomSheet trade={selected} tags={tags} onClose={() => setSelected(null)} />}
     </div>
   );
 }

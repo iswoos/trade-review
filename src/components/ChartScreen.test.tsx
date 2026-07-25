@@ -22,10 +22,16 @@ vi.mock('../db/trades', async (importOriginal) => {
 
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
-    addLineSeries: vi.fn(() => ({ setData: vi.fn(), setMarkers: vi.fn() })),
+    addSeries: vi.fn(() => ({ setData: vi.fn() })),
+    applyOptions: vi.fn(),
     subscribeClick: vi.fn(),
+    priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+    timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
     remove: vi.fn(),
   })),
+  createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),
+  CandlestickSeries: {},
+  LineSeries: {},
   LineStyle: { Dashed: 2 },
 }));
 
@@ -82,7 +88,9 @@ beforeEach(async () => {
     req.onblocked = () => resolve();
   });
   db = await openTradeReviewDB();
-  vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2025-07-10', close: 11.36 }]);
+  vi.mocked(quotes.fetchHistory).mockResolvedValue([
+    { date: '2025-07-10', open: 11.36, high: 11.36, low: 11.36, close: 11.36 },
+  ]);
   vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
   vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
   const actualTrades = await vi.importActual<typeof import('../db/trades')>('../db/trades');
@@ -172,7 +180,7 @@ describe('ChartScreen', () => {
     });
   });
 
-  it("opens the trade-list sheet and shows a saved trade's detail on selection", async () => {
+  it("shows the trade list inline (no button/sheet needed) and opens a trade's detail as a modal on selection", async () => {
     await createTrade(db, {
       ticker: 'JOBY',
       market: 'US',
@@ -204,11 +212,13 @@ describe('ChartScreen', () => {
       />
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: '매매 목록' }));
-    await screen.findByRole('dialog', { name: '매매 목록 시트' });
-    await userEvent.click(await screen.findByRole('button', { name: /매수 11.36/ }));
+    expect(screen.queryByRole('button', { name: '매매 목록' })).not.toBeInTheDocument();
+    const tradeRow = await screen.findByRole('button', { name: /매수 11.36/ });
 
-    expect(await screen.findByRole('dialog', { name: '매매 상세' })).toBeInTheDocument();
+    await userEvent.click(tradeRow);
+
+    const dialog = await screen.findByRole('dialog', { name: '매매 상세' });
+    expect(dialog.parentElement).toHaveClass('fixed', 'inset-0');
   });
 
   it('discards a slow-to-resolve response for a ticker that is no longer displayed after a fast switch', async () => {
@@ -246,8 +256,6 @@ describe('ChartScreen', () => {
 
     // JOBY's (current ticker's) response arrives first...
     bTrades.resolve([tradeFixture({ ticker: 'JOBY', price: 22.5 })]);
-    await userEvent.click(await screen.findByRole('button', { name: '매매 목록' }));
-    await screen.findByRole('dialog', { name: '매매 목록 시트' });
     expect(await screen.findByRole('button', { name: /매수 22.5/ })).toBeInTheDocument();
 
     // ...then AAPL's stale response resolves late and must be silently dropped.

@@ -2,6 +2,9 @@ interface DataGoKrStockPriceRow {
   basDt: string;
   srtnCd: string;
   clpr: string;
+  mkp: string;
+  hipr: string;
+  lopr: string;
 }
 
 interface DataGoKrResponse {
@@ -55,7 +58,9 @@ export async function dataGoKrQuote(symbol: string): Promise<{ symbol: string; p
   return { symbol, price: Number(latest.clpr.replace(/,/g, '')) };
 }
 
-export async function dataGoKrHistory(symbol: string): Promise<{ date: string; price: number }[]> {
+export async function dataGoKrHistory(
+  symbol: string
+): Promise<{ date: string; open: number; high: number; low: number; price: number }[]> {
   const to = new Date();
   const from = new Date(to);
   from.setFullYear(from.getFullYear() - 1);
@@ -70,6 +75,9 @@ export async function dataGoKrHistory(symbol: string): Promise<{ date: string; p
     .sort((a, b) => a.basDt.localeCompare(b.basDt))
     .map((r) => ({
       date: `${r.basDt.slice(0, 4)}-${r.basDt.slice(4, 6)}-${r.basDt.slice(6, 8)}`,
+      open: Number(r.mkp.replace(/,/g, '')),
+      high: Number(r.hipr.replace(/,/g, '')),
+      low: Number(r.lopr.replace(/,/g, '')),
       price: Number(r.clpr.replace(/,/g, '')),
     }));
 }

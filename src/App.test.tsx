@@ -17,10 +17,16 @@ vi.mock('./api/quotes', async (importOriginal) => {
 
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
-    addLineSeries: vi.fn(() => ({ setData: vi.fn(), setMarkers: vi.fn() })),
+    addSeries: vi.fn(() => ({ setData: vi.fn() })),
+    applyOptions: vi.fn(),
     subscribeClick: vi.fn(),
+    priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+    timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
     remove: vi.fn(),
   })),
+  createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),
+  CandlestickSeries: {},
+  LineSeries: {},
   LineStyle: { Dashed: 2 },
 }));
 
@@ -48,16 +54,25 @@ describe('App', () => {
     // ChartScreen loads history/trades/position from separate async sources, so PriceChart's
     // effect can re-run more than once while data trickles in. Assert on whether a dashed
     // (avg-cost) series was ever added, not on a raw call count, which would be flaky here.
-    const addLineSeriesSpy = vi.fn((_options?: { lineStyle?: number }) => ({ setData: vi.fn(), setMarkers: vi.fn() }));
+    const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: { lineStyle?: number }) => ({
+      setData: vi.fn(),
+    }));
     vi.mocked(createChart).mockReturnValue({
-      addLineSeries: addLineSeriesSpy,
+      addSeries: addSeriesSpy,
+      applyOptions: vi.fn(),
       subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
       remove: vi.fn(),
     } as unknown as ReturnType<typeof createChart>);
-    vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2026-01-01', close: 11.36 }]);
+    vi.mocked(quotes.fetchHistory).mockResolvedValue([
+      { date: '2026-01-01', open: 11.36, high: 11.36, low: 11.36, close: 11.36 },
+    ]);
 
     function hasAvgCostLine() {
-      return addLineSeriesSpy.mock.calls.some(([config]) => (config as { lineStyle?: number }).lineStyle === 2);
+      return addSeriesSpy.mock.calls.some(
+        ([, config]) => (config as { lineStyle?: number } | undefined)?.lineStyle === 2
+      );
     }
 
     render(<App />);
