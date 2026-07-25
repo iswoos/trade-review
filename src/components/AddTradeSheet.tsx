@@ -4,7 +4,6 @@ import type { TradeReviewDB } from '../db/schema';
 import type { Currency, QuantityType, Side, Tag, Trade } from '../types';
 import { createTrade } from '../db/trades';
 import { TagPicker } from './TagPicker';
-import { ConvictionStars } from './ConvictionStars';
 import { fetchQuote } from '../api/quotes';
 
 interface AddTradeSheetProps {
@@ -24,7 +23,6 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
   const [quantityValue, setQuantityValue] = useState('');
   const [fxRateAtTrade, setFxRateAtTrade] = useState('');
   const [tagIds, setTagIds] = useState<string[]>([]);
-  const [conviction, setConviction] = useState<number | null>(null);
   const [memo, setMemo] = useState('');
   const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeValue, setTimeValue] = useState('');
@@ -50,7 +48,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
       quantityValue: Number(quantityValue),
       fxRateAtTrade: quantityType === 'amount' && currency !== 'KRW' ? Number(fxRateAtTrade) : null,
       rationaleTagIds: tagIds,
-      conviction,
+      conviction: null,
       memo,
       attachment: null,
     });
@@ -96,9 +94,9 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
           </button>
         </div>
         <label className="text-xs text-zinc-500 dark:text-zinc-400">
-          체결가
+          {currency === 'KRW' ? '체결가 (원)' : '체결가 ($)'}
           <input
-            aria-label="체결가"
+            aria-label={currency === 'KRW' ? '체결가 (원)' : '체결가 ($)'}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             inputMode="decimal"
@@ -136,7 +134,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
                 : 'flex-1 rounded-xl border border-zinc-200 py-2 text-sm font-bold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300'
             }
           >
-            주
+            수량(주)
           </button>
           <button
             type="button"
@@ -148,11 +146,11 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
                 : 'flex-1 rounded-xl border border-zinc-200 py-2 text-sm font-bold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300'
             }
           >
-            원
+            {currency === 'KRW' ? '금액(원)' : '금액($)'}
           </button>
         </div>
         <label className="text-xs text-zinc-500 dark:text-zinc-400">
-          {quantityType === 'shares' ? '수량' : '금액(원)'}
+          {quantityType === 'shares' ? '수량(주)' : currency === 'KRW' ? '금액(원)' : '금액($)'}
           <input
             aria-label="수량 또는 금액"
             value={quantityValue}
@@ -173,8 +171,8 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             />
           </label>
         )}
+        <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">매수/매도 이유</p>
         <TagPicker tags={availableTags} selectedIds={tagIds} onChange={setTagIds} />
-        <ConvictionStars value={conviction} onChange={setConviction} />
         <label className="text-xs text-zinc-500 dark:text-zinc-400">
           메모
           <textarea

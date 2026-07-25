@@ -113,4 +113,32 @@ describe('AddTradeSheet', () => {
     const saved = onSaved.mock.calls[0][0];
     expect(saved.datetime).toBe(new Date(dateInput.value).toISOString());
   });
+
+  it('shows a visible "매수/매도 이유" heading above the tag picker', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.getByText('매수/매도 이유')).toBeInTheDocument();
+  });
+
+  it('shows USD currency-aware price/quantity labels for a USD-quoted ticker (default)', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.getByLabelText('체결가 ($)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '수량(주)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '금액($)' })).toBeInTheDocument();
+  });
+
+  it('shows KRW currency-aware price/quantity labels for a KRW-quoted ticker', async () => {
+    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 71000, currency: 'KRW' });
+    render(<AddTradeSheet db={db} ticker="005930" name="삼성전자" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('71000');
+    expect(screen.getByLabelText('체결가 (원)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '금액(원)' })).toBeInTheDocument();
+  });
+
+  it('does not render a conviction star rating', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.queryByRole('radiogroup', { name: '확신도' })).not.toBeInTheDocument();
+  });
 });
