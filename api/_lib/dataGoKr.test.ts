@@ -28,6 +28,26 @@ function okResponse(
   };
 }
 
+function pageResponse(
+  items: { basDt: string; srtnCd: string; clpr: string; mkp?: string; hipr?: string; lopr?: string }[],
+  totalCount: number
+) {
+  return {
+    ok: true,
+    json: async () => ({
+      response: {
+        header: { resultCode: '00', resultMsg: 'OK' },
+        body: {
+          items: items.length === 0 ? '' : { item: items },
+          numOfRows: items.length,
+          pageNo: 1,
+          totalCount,
+        },
+      },
+    }),
+  };
+}
+
 describe('dataGoKrQuote', () => {
   it('returns the requested symbol and latest close price', async () => {
     vi.stubGlobal(
@@ -146,5 +166,48 @@ describe('dataGoKrHistory', () => {
     );
     const bars = await dataGoKrHistory('005930.KS');
     expect(bars).toEqual([{ date: '2026-07-18', open: 71000, high: 73000, low: 70500, price: 72000 }]);
+  });
+
+  it('fetches a second page when totalCount exceeds the first page\'s row count', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        pageResponse([{ basDt: '20260717', srtnCd: '005930', clpr: '100', mkp: '99', hipr: '101', lopr: '98' }], 2)
+      )
+      .mockResolvedValueOnce(
+        pageResponse([{ basDt: '20260718', srtnCd: '005930', clpr: '102', mkp: '100', hipr: '103', lopr: '99' }], 2)
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const bars = await dataGoKrHistory('005930.KS');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(bars).toEqual([
+      { date: '2026-07-17', open: 99, high: 101, low: 98, price: 100 },
+      { date: '2026-07-18', open: 100, high: 103, low: 99, price: 102 },
+    ]);
+    const secondUrl = fetchMock.mock.calls[1][0] as string;
+    expect(secondUrl).toContain('pageNo=2');
+  });
+
+  it('stops after one page when totalCount fits in the first page', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        pageResponse([{ basDt: '20260717', srtnCd: '005930', clpr: '100', mkp: '99', hipr: '101', lopr: '98' }], 1)
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    await dataGoKrHistory('005930.KS');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('requests a lookback window of roughly 20 years', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(pageResponse([], 0));
+    vi.stubGlobal('fetch', fetchMock);
+    await dataGoKrHistory('005930.KS');
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    const beginYear = Number(url.searchParams.get('beginBasDt')!.slice(0, 4));
+    const endYear = new Date().getFullYear();
+    expect(endYear - beginYear).toBeGreaterThanOrEqual(19);
   });
 });

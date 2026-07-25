@@ -33,7 +33,9 @@ function formatBasDt(date: Date): string {
   return date.toISOString().slice(0, 10).replace(/-/g, '');
 }
 
-async function dataGoKrFetch(params: Record<string, string>): Promise<DataGoKrStockPriceRow[]> {
+async function dataGoKrFetch(
+  params: Record<string, string>
+): Promise<{ rows: DataGoKrStockPriceRow[]; totalCount: number }> {
   const search = new URLSearchParams({
     ...params,
     serviceKey: dataGoKrApiKey(),
@@ -48,11 +50,12 @@ async function dataGoKrFetch(params: Record<string, string>): Promise<DataGoKrSt
     throw new Error(`data.go.kr error: ${data.response.header.resultMsg}`);
   }
   const items = data.response.body?.items;
-  return !items || typeof items === 'string' ? [] : items.item;
+  const rows = !items || typeof items === 'string' ? [] : items.item;
+  return { rows, totalCount: data.response.body?.totalCount ?? 0 };
 }
 
 export async function dataGoKrQuote(symbol: string): Promise<{ symbol: string; price: number }> {
-  const rows = await dataGoKrFetch({ likeSrtnCd: stripKrSuffix(symbol), numOfRows: '10', pageNo: '1' });
+  const { rows } = await dataGoKrFetch({ likeSrtnCd: stripKrSuffix(symbol), numOfRows: '10', pageNo: '1' });
   if (!rows[0]) throw new Error(`data.go.kr quote returned no data for ${symbol}`);
   const latest = rows.reduce((max, r) => (r.basDt > max.basDt ? r : max));
   return { symbol, price: Number(latest.clpr.replace(/,/g, '')) };
@@ -63,14 +66,25 @@ export async function dataGoKrHistory(
 ): Promise<{ date: string; open: number; high: number; low: number; price: number }[]> {
   const to = new Date();
   const from = new Date(to);
-  from.setFullYear(from.getFullYear() - 1);
-  const rows = await dataGoKrFetch({
-    likeSrtnCd: stripKrSuffix(symbol),
-    beginBasDt: formatBasDt(from),
-    endBasDt: formatBasDt(to),
-    numOfRows: '500',
-    pageNo: '1',
-  });
+  from.setFullYear(from.getFullYear() - 20);
+  const numOfRows = 1000;
+  const rows: DataGoKrStockPriceRow[] = [];
+
+  // 50 pages * 1000 rows = 50,000 rows is far beyond 20 years of trading days
+  // (~5,000) - this bound only guards against a pathological API response,
+  // it is never expected to be hit in practice.
+  for (let pageNo = 1; pageNo <= 50; pageNo++) {
+    const page = await dataGoKrFetch({
+      likeSrtnCd: stripKrSuffix(symbol),
+      beginBasDt: formatBasDt(from),
+      endBasDt: formatBasDt(to),
+      numOfRows: String(numOfRows),
+      pageNo: String(pageNo),
+    });
+    rows.push(...page.rows);
+    if (page.rows.length === 0 || rows.length >= page.totalCount) break;
+  }
+
   return [...rows]
     .sort((a, b) => a.basDt.localeCompare(b.basDt))
     .map((r) => ({
