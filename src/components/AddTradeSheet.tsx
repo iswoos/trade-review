@@ -27,7 +27,6 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
   const [conviction, setConviction] = useState<number | null>(null);
   const [memo, setMemo] = useState('');
   const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
-  const [datetimeUnknown, setDatetimeUnknown] = useState(false);
   const [timeValue, setTimeValue] = useState('');
 
   useEffect(() => {
@@ -37,29 +36,14 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
     });
   }, [ticker]);
 
-  function toggleDatetimeUnknown() {
-    setDatetimeUnknown((prev) => {
-      const next = !prev;
-      if (next) {
-        setDatetimeValue('');
-        setTimeValue('');
-      } else {
-        setDatetimeValue(new Date().toISOString().slice(0, 10));
-      }
-      return next;
-    });
-  }
-
   async function handleSave() {
     const trade = await createTrade(db, {
       ticker,
       market: currency === 'KRW' ? 'KR' : 'US',
       name,
       currency,
-      datetime: datetimeUnknown
-        ? null
-        : new Date(timeValue ? `${datetimeValue}T${timeValue}` : datetimeValue).toISOString(),
-      datetimeUnknown,
+      datetime: new Date(timeValue ? `${datetimeValue}T${timeValue}` : datetimeValue).toISOString(),
+      datetimeUnknown: false,
       side,
       price: Number(price),
       quantityType,
@@ -128,7 +112,6 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             type="date"
             value={datetimeValue}
             onChange={(e) => setDatetimeValue(e.target.value)}
-            disabled={datetimeUnknown}
             className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           />
         </label>
@@ -139,18 +122,9 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             type="time"
             value={timeValue}
             onChange={(e) => setTimeValue(e.target.value)}
-            disabled={datetimeUnknown}
             className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           />
         </label>
-        <button
-          type="button"
-          aria-pressed={datetimeUnknown}
-          onClick={toggleDatetimeUnknown}
-          className="self-start rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-        >
-          시간 모름 / 예약매매
-        </button>
         <div role="radiogroup" aria-label="수량 단위" className="flex gap-2">
           <button
             type="button"
@@ -210,8 +184,18 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           />
         </label>
-        <button type="submit" className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]">
-          저장 · 평단 자동계산
+        <button
+          type="submit"
+          disabled={
+            !datetimeValue ||
+            !price.trim() ||
+            !quantityValue.trim() ||
+            tagIds.length === 0 ||
+            (quantityType === 'amount' && currency !== 'KRW' && !fxRateAtTrade)
+          }
+          className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-40"
+        >
+          저장
         </button>
         <button
           type="button"

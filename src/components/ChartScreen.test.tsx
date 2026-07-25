@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from '../db/schema';
 import { createTrade } from '../db/trades';
+import { createTag } from '../db/tags';
 import { ChartScreen } from './ChartScreen';
 import * as quotes from '../api/quotes';
 import * as tradesModule from '../db/trades';
@@ -159,13 +160,14 @@ describe('ChartScreen', () => {
   });
 
   it('opens the add-trade sheet and reports the saved trade, then closes the sheet', async () => {
+    const tag = await createTag(db, '팩트');
     const onTradeSaved = vi.fn();
     render(
       <ChartScreen
         db={db}
         ticker="JOBY"
         name="조비"
-        tags={[]}
+        tags={[tag]}
         positions={[]}
         sortOrder="recent"
         onSelectTicker={vi.fn()}
@@ -176,7 +178,8 @@ describe('ChartScreen', () => {
     await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
     await screen.findByRole('dialog', { name: '매매 기록 추가' });
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => {
       expect(onTradeSaved).toHaveBeenCalledOnce();
