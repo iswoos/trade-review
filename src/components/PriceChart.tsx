@@ -72,7 +72,11 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     ];
     const legendEntries: { label: string; color: string; value: number }[] = [];
     for (const ma of MOVING_AVERAGES) {
-      const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth });
+      // lastValueVisible defaults to true, which stacks a colored price-axis
+      // badge per series; with 5 MAs + the avg-cost line that clutters the
+      // axis with unlabeled numbers. The top-right legend (below) is the
+      // labeled replacement for this data, so the axis badges are redundant.
+      const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth, lastValueVisible: false });
       const maValues = simpleMovingAverage(closeValues, ma.window);
       series.setData(
         maValues
@@ -87,7 +91,11 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     setLegend(legendEntries);
 
     if (avgCost != null && history.length > 0) {
-      const avgCostSeries = chart.addSeries(LineSeries, { color: '#ea580c', lineStyle: LineStyle.Dashed });
+      const avgCostSeries = chart.addSeries(LineSeries, {
+        color: '#ea580c',
+        lineStyle: LineStyle.Dashed,
+        lastValueVisible: false,
+      });
       avgCostSeries.setData([
         { time: history[0].date, value: avgCost },
         { time: history[history.length - 1].date, value: avgCost },
@@ -104,6 +112,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           color: t.side === 'buy' ? '#10b981' : '#a855f7',
           shape: 'circle' as const,
           size: 2,
+          text: t.side === 'buy' ? '매수' : '매도',
         }))
     );
 
@@ -115,6 +124,16 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     let dragStart: { x: number; y: number } | null = null;
     let dragStartPriceRange: { from: number; to: number } | null = null;
     let dragStartLogicalRange: { from: number; to: number } | null = null;
+    let tapStart: { x: number; y: number; time: number } | null = null;
+    const TAP_MAX_DISTANCE = 10;
+    const TAP_MAX_DURATION_MS = 500;
+
+    function selectTradeAtCoordinate(x: number) {
+      const time = timeScale.coordinateToTime(x);
+      if (time == null) return;
+      const clicked = trades.find((t) => t.datetime?.slice(0, 10) === time);
+      if (clicked) onPointSelect(clicked);
+    }
 
     function handleTouchStart(event: TouchEvent) {
       const touch = event.touches[0];
@@ -139,6 +158,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         dragMode = null;
       }
       dragStart = { x, y };
+      // Only a touch that starts outside both zoom regions can become a tap-to-select.
+      tapStart = dragMode === null ? { x, y, time: Date.now() } : null;
     }
 
     function handleTouchMove(event: TouchEvent) {
@@ -163,11 +184,25 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       }
     }
 
-    function handleTouchEnd() {
+    function handleTouchEnd(event: TouchEvent) {
+      if (tapStart) {
+        const touch = event.changedTouches[0];
+        if (touch) {
+          const rect = container!.getBoundingClientRect();
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          const distance = Math.hypot(x - tapStart.x, y - tapStart.y);
+          const duration = Date.now() - tapStart.time;
+          if (distance <= TAP_MAX_DISTANCE && duration <= TAP_MAX_DURATION_MS) {
+            selectTradeAtCoordinate(x);
+          }
+        }
+      }
       dragMode = null;
       dragStart = null;
       dragStartPriceRange = null;
       dragStartLogicalRange = null;
+      tapStart = null;
     }
 
     container.addEventListener('touchstart', handleTouchStart);

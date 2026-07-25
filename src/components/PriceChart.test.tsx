@@ -125,10 +125,144 @@ describe('PriceChart', () => {
     expect(addSeriesSpy.mock.calls[3][1]).toMatchObject({ color: '#8b5cf6' });
     expect(addSeriesSpy.mock.calls[5][1]).toMatchObject({ color: '#0d9488' });
 
+    // Every MA series suppresses its own price-axis last-value badge — the
+    // top-right legend is the labeled replacement for this data, so the
+    // native per-series badges would just be redundant, unlabeled clutter.
+    for (let i = 1; i <= 5; i++) {
+      expect(addSeriesSpy.mock.calls[i][1]).toMatchObject({ lastValueVisible: false });
+    }
+
     const [, markers] = createSeriesMarkersSpy.mock.calls[0];
     expect(markers).toEqual([
-      expect.objectContaining({ shape: 'circle', color: '#10b981', size: 2 }),
+      expect.objectContaining({ shape: 'circle', color: '#10b981', size: 2, text: '매수' }),
     ]);
+  });
+
+  it('suppresses the avg-cost line price-axis last-value badge too', () => {
+    vi.clearAllMocks();
+    const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: addSeriesSpy,
+      applyOptions: vi.fn(),
+      subscribeClick: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn() })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={10.5}
+        onPointSelect={() => {}}
+      />
+    );
+
+    // Calls: [0]=candle, [1..5]=MAs, [6]=avg-cost line.
+    expect(addSeriesSpy.mock.calls[6][1]).toMatchObject({ lastValueVisible: false });
+  });
+
+  it('selects the trade at the tapped coordinate when a plain tap lands outside both zoom regions', () => {
+    const coordinateToTime = vi.fn(() => '2026-01-01');
+    let containerEl!: HTMLDivElement;
+    vi.mocked(createChart).mockImplementation((el) => {
+      containerEl = el as HTMLDivElement;
+      return {
+        addSeries: vi.fn(() => ({ setData: vi.fn() })),
+        applyOptions: vi.fn(),
+        subscribeClick: vi.fn(),
+        priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+        timeScale: vi.fn(() => ({
+          setVisibleLogicalRange: vi.fn(),
+          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
+          coordinateToTime,
+        })),
+        remove: vi.fn(),
+      } as unknown as ReturnType<typeof createChart>;
+    });
+
+    const trade = {
+      id: '1', ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetime: '2026-01-01T00:00:00.000Z', datetimeUnknown: false, side: 'buy' as const,
+      price: 11, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const onPointSelect = vi.fn();
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[trade]}
+        avgCost={null}
+        onPointSelect={onPointSelect}
+      />
+    );
+
+    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
+    });
+
+    // Tap in the main plot area (not the right price-scale strip, not the bottom time-axis strip),
+    // with no meaningful movement between touchstart and touchend.
+    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 150, clientY: 150 }] });
+    containerEl.dispatchEvent(touchStart);
+
+    const touchEnd = new Event('touchend', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchEnd, 'changedTouches', { value: [{ clientX: 151, clientY: 149 }] }); // 1-2px jitter, still counts as a tap
+    containerEl.dispatchEvent(touchEnd);
+
+    // Uses the touchend (lift-off) x-coordinate, not the touchstart x.
+    expect(coordinateToTime).toHaveBeenCalledWith(151);
+    expect(onPointSelect).toHaveBeenCalledWith(trade);
+  });
+
+  it('does not select a trade when the touch moved too far to count as a tap', () => {
+    const coordinateToTime = vi.fn(() => '2026-01-01');
+    let containerEl!: HTMLDivElement;
+    vi.mocked(createChart).mockImplementation((el) => {
+      containerEl = el as HTMLDivElement;
+      return {
+        addSeries: vi.fn(() => ({ setData: vi.fn() })),
+        applyOptions: vi.fn(),
+        subscribeClick: vi.fn(),
+        priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+        timeScale: vi.fn(() => ({
+          setVisibleLogicalRange: vi.fn(),
+          getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })),
+          coordinateToTime,
+        })),
+        remove: vi.fn(),
+      } as unknown as ReturnType<typeof createChart>;
+    });
+
+    const onPointSelect = vi.fn();
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={onPointSelect}
+      />
+    );
+
+    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
+    });
+
+    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 150, clientY: 150 }] });
+    containerEl.dispatchEvent(touchStart);
+
+    // Moved 40px before lifting — a drag/scroll gesture, not a tap.
+    const touchEnd = new Event('touchend', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchEnd, 'changedTouches', { value: [{ clientX: 190, clientY: 150 }] });
+    containerEl.dispatchEvent(touchEnd);
+
+    expect(coordinateToTime).not.toHaveBeenCalled();
+    expect(onPointSelect).not.toHaveBeenCalled();
   });
 
   it('applies dark theme colors when the html element has the dark class on mount', () => {
