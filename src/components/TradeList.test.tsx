@@ -19,4 +19,24 @@ describe('TradeList', () => {
     await userEvent.click(screen.getByRole('button', { name: /2025-10-15/ }));
     expect(onSelect).toHaveBeenCalledWith(trade);
   });
+
+  it('shows no memo preview or 더보기 button when the trade has no memo', () => {
+    render(<TradeList trades={[trade]} tags={[]} onSelect={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: '더보기' })).not.toBeInTheDocument();
+  });
+
+  it('clamps a long memo to 3 lines and expands/collapses it via 더보기/접기', async () => {
+    const longMemo = '이 매매는 실적발표 직전에 진입했고, 이후 변동성이 커질 것으로 예상했다. 장기 보유 관점에서 접근했다.';
+    render(<TradeList trades={[{ ...trade, memo: longMemo }]} tags={[]} onSelect={vi.fn()} />);
+
+    const preview = screen.getByText(longMemo);
+    expect(preview).toHaveClass('line-clamp-3');
+
+    await userEvent.click(screen.getByRole('button', { name: '더보기' }));
+    expect(screen.getByText(longMemo)).not.toHaveClass('line-clamp-3');
+    expect(screen.getByRole('button', { name: '접기' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '접기' }));
+    expect(screen.getByText(longMemo)).toHaveClass('line-clamp-3');
+  });
 });
