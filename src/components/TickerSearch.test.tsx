@@ -133,4 +133,33 @@ describe('TickerSearch', () => {
     expect(await screen.findByRole('button', { name: /Joby Aviation \(JOBY\)/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Johnson & Johnson \(JNJ\)/ })).not.toBeInTheDocument();
   });
+
+  it('searches instantly (no debounce) for a Korean-language query', async () => {
+    vi.mocked(quotes.searchSymbols).mockClear();
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([{ symbol: '005930', name: '삼성전자', exchange: 'KRX' }]);
+
+    render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('종목 검색'), { target: { value: '삼성' } });
+
+    // No timer advance — searchSymbols must have already been called synchronously.
+    expect(quotes.searchSymbols).toHaveBeenCalledWith('삼성');
+    expect(await screen.findByRole('button', { name: /삼성전자 \(005930\)/ })).toBeInTheDocument();
+  });
+
+  it('still debounces a non-Korean query even after a prior Korean-language search', async () => {
+    vi.useFakeTimers();
+    vi.mocked(quotes.searchSymbols).mockClear();
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+
+    render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
+    const input = screen.getByLabelText('종목 검색');
+
+    fireEvent.change(input, { target: { value: 'j' } });
+    expect(quotes.searchSymbols).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(500);
+    expect(quotes.searchSymbols).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
 });
