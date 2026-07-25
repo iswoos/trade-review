@@ -742,7 +742,7 @@ describe('PriceChart', () => {
   });
 
   it('does not render an arrow for a trade dated on a non-trading day in the default 일 (day) view', async () => {
-    const timeToCoordinate = vi.fn(() => null);
+    const timeToCoordinate = vi.fn((time: string) => (time === '2026-07-17' ? 50 : null));
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
