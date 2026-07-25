@@ -40,6 +40,14 @@ describe('tags', () => {
     expect(active.find((t) => t.id === tag.id)).toBeUndefined();
     expect(all.find((t) => t.id === tag.id)?.archived).toBe(true);
   });
+
+  it('listActiveTags returns tags in creation order, not raw IndexedDB key order', async () => {
+    const tagA = await createTag(db, 'A');
+    const tagB = await createTag(db, 'B');
+    const tagC = await createTag(db, 'C');
+    const active = await listActiveTags(db);
+    expect(active.map((t) => t.id)).toEqual([tagA.id, tagB.id, tagC.id]);
+  });
 });
 
 describe('seedDefaultTags', () => {

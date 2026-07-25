@@ -24,7 +24,7 @@ export async function archiveTag(db: IDBPDatabase<TradeReviewDB>, id: string): P
 
 export async function listActiveTags(db: IDBPDatabase<TradeReviewDB>): Promise<Tag[]> {
   const all = await db.getAll('tags');
-  return all.filter((t) => !t.archived);
+  return all.filter((t) => !t.archived).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 export async function listAllTags(db: IDBPDatabase<TradeReviewDB>): Promise<Tag[]> {
