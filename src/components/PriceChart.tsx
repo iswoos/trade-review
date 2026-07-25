@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { createChart, LineStyle, type IChartApi } from 'lightweight-charts';
+import {
+  createChart,
+  createSeriesMarkers,
+  CandlestickSeries,
+  LineSeries,
+  LineStyle,
+  type IChartApi,
+} from 'lightweight-charts';
 import type { HistoryBar } from '../api/quotes';
 import type { Trade } from '../types';
 import { simpleMovingAverage } from '../lib/movingAverage';
@@ -24,8 +31,17 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       handleScroll: { horzTouchDrag: true },
     });
 
-    const priceSeries = chart.addLineSeries({ color: '#2563eb' });
-    priceSeries.setData(history.map((bar) => ({ time: bar.date, value: bar.close })));
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#2563eb',
+      downColor: '#dc2626',
+      borderUpColor: '#2563eb',
+      borderDownColor: '#dc2626',
+      wickUpColor: '#2563eb',
+      wickDownColor: '#dc2626',
+    });
+    candleSeries.setData(
+      history.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
+    );
 
     const closeValues = history.map((bar) => bar.close);
     // ADR-0008: MA cap expanded from 1~2 (20/60일) to 5 (5/20/50/100/200일); 20일·200일 emphasized (lineWidth 3 vs 1).
@@ -37,7 +53,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       { window: 200, color: '#dc2626', lineWidth: 3 },
     ];
     for (const ma of MOVING_AVERAGES) {
-      const series = chart.addLineSeries({ color: ma.color, lineWidth: ma.lineWidth });
+      const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth });
       series.setData(
         simpleMovingAverage(closeValues, ma.window)
           .map((value, i) => ({ time: history[i].date, value }))
@@ -46,14 +62,15 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     }
 
     if (avgCost != null && history.length > 0) {
-      const avgCostSeries = chart.addLineSeries({ color: '#ea580c', lineStyle: LineStyle.Dashed });
+      const avgCostSeries = chart.addSeries(LineSeries, { color: '#ea580c', lineStyle: LineStyle.Dashed });
       avgCostSeries.setData([
         { time: history[0].date, value: avgCost },
         { time: history[history.length - 1].date, value: avgCost },
       ]);
     }
 
-    priceSeries.setMarkers(
+    createSeriesMarkers(
+      candleSeries,
       trades
         .filter((t) => t.datetime)
         .map((t) => ({

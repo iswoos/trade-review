@@ -22,10 +22,14 @@ vi.mock('../db/trades', async (importOriginal) => {
 
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
-    addLineSeries: vi.fn(() => ({ setData: vi.fn(), setMarkers: vi.fn() })),
+    addSeries: vi.fn(() => ({ setData: vi.fn() })),
+    applyOptions: vi.fn(),
     subscribeClick: vi.fn(),
     remove: vi.fn(),
   })),
+  createSeriesMarkers: vi.fn(() => ({ setMarkers: vi.fn() })),
+  CandlestickSeries: {},
+  LineSeries: {},
   LineStyle: { Dashed: 2 },
 }));
 
@@ -82,7 +86,9 @@ beforeEach(async () => {
     req.onblocked = () => resolve();
   });
   db = await openTradeReviewDB();
-  vi.mocked(quotes.fetchHistory).mockResolvedValue([{ date: '2025-07-10', close: 11.36 }]);
+  vi.mocked(quotes.fetchHistory).mockResolvedValue([
+    { date: '2025-07-10', open: 11.36, high: 11.36, low: 11.36, close: 11.36 },
+  ]);
   vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
   vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
   const actualTrades = await vi.importActual<typeof import('../db/trades')>('../db/trades');
