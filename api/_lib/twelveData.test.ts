@@ -74,6 +74,14 @@ describe('twelveDataHistory', () => {
     expect(url).toContain('symbol=JOBY');
     expect(url).toContain('interval=1day');
   });
+
+  it('requests a large outputsize so a single call covers many years of history', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ values: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await twelveDataHistory('JOBY');
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get('outputsize')).toBe('5000');
+  });
 });
 
 describe('twelveDataSearch', () => {
