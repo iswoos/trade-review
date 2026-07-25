@@ -169,4 +169,28 @@ describe('PriceChart', () => {
       expect.objectContaining({ layout: expect.objectContaining({ background: { color: '#18181b' } }) })
     );
   });
+
+  it('renders a moving-average legend with period and latest value, color-matched', () => {
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      subscribeClick: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    const history = Array.from({ length: 5 }, (_, i) => ({
+      date: `2026-01-0${i + 1}`,
+      open: 10,
+      high: 10,
+      low: 10,
+      close: 10 + i,
+    }));
+
+    render(<PriceChart history={history} trades={[]} avgCost={null} onPointSelect={() => {}} />);
+
+    const legend = screen.getByTestId('ma-legend');
+    // 5-day MA over closes [10,11,12,13,14] = 12, on the only day it has enough data (the 5th bar).
+    expect(legend).toHaveTextContent('5일');
+    expect(legend).toHaveTextContent('12');
+  });
 });

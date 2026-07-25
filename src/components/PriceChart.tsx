@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createChart,
   createSeriesMarkers,
@@ -36,6 +36,7 @@ function themeOptions(isDark: boolean) {
 
 export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -62,21 +63,28 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
 
     const closeValues = history.map((bar) => bar.close);
     // ADR-0008: MA cap expanded from 1~2 (20/60일) to 5 (5/20/50/100/200일); 20일·200일 emphasized (lineWidth 3 vs 1).
-    const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4 }[] = [
-      { window: 5, color: '#94a3b8', lineWidth: 1 },
-      { window: 20, color: '#f59e0b', lineWidth: 3 },
-      { window: 50, color: '#8b5cf6', lineWidth: 1 },
-      { window: 100, color: '#6366f1', lineWidth: 1 },
-      { window: 200, color: '#0d9488', lineWidth: 3 },
+    const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4; label: string }[] = [
+      { window: 5, color: '#94a3b8', lineWidth: 1, label: '5일' },
+      { window: 20, color: '#f59e0b', lineWidth: 3, label: '20일' },
+      { window: 50, color: '#8b5cf6', lineWidth: 1, label: '50일' },
+      { window: 100, color: '#6366f1', lineWidth: 1, label: '100일' },
+      { window: 200, color: '#0d9488', lineWidth: 3, label: '200일' },
     ];
+    const legendEntries: { label: string; color: string; value: number }[] = [];
     for (const ma of MOVING_AVERAGES) {
       const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth });
+      const maValues = simpleMovingAverage(closeValues, ma.window);
       series.setData(
-        simpleMovingAverage(closeValues, ma.window)
+        maValues
           .map((value, i) => ({ time: history[i].date, value }))
           .filter((point): point is { time: string; value: number } => point.value != null)
       );
+      const latest = [...maValues].reverse().find((value): value is number => value != null);
+      if (latest != null) {
+        legendEntries.push({ label: ma.label, color: ma.color, value: latest });
+      }
     }
+    setLegend(legendEntries);
 
     if (avgCost != null && history.length > 0) {
       const avgCostSeries = chart.addSeries(LineSeries, { color: '#ea580c', lineStyle: LineStyle.Dashed });
@@ -116,5 +124,19 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     };
   }, [history, trades, avgCost, onPointSelect]);
 
-  return <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />;
+  return (
+    <div style={{ position: 'relative' }}>
+      <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />
+      <div
+        data-testid="ma-legend"
+        style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.65rem', textAlign: 'right', pointerEvents: 'none' }}
+      >
+        {legend.map((entry) => (
+          <div key={entry.label} style={{ color: entry.color }}>
+            {entry.label} {entry.value}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
