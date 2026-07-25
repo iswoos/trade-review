@@ -60,7 +60,9 @@ describe('PriceChart', () => {
   });
 
   it('adds the price series as a candlestick series with OHLC data', () => {
+    const candleSetData = vi.fn();
     const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
+    addSeriesSpy.mockImplementationOnce(() => ({ setData: candleSetData }));
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
@@ -81,6 +83,9 @@ describe('PriceChart', () => {
 
     const [seriesType] = addSeriesSpy.mock.calls[0];
     expect(seriesType).toBe(CandlestickSeries);
+    expect(candleSetData).toHaveBeenCalledWith([
+      { time: '2026-01-01', open: 10, high: 12, low: 9, close: 11 },
+    ]);
   });
 
   it('uses the final candle/MA color palette and circle markers for trades', () => {
@@ -252,6 +257,50 @@ describe('PriceChart', () => {
 
     expect(setAutoScale).toHaveBeenCalledWith(false);
     expect(setVisibleRange).toHaveBeenCalled();
+  });
+
+  it('does not disable auto-scale when the price scale has no visible range yet on touchstart', () => {
+    const setAutoScale = vi.fn();
+    const setVisibleRange = vi.fn();
+    const getVisibleRange = vi.fn(() => null);
+    const priceScale = vi.fn(() => ({ width: () => 50, setAutoScale, setVisibleRange, getVisibleRange }));
+    let containerEl!: HTMLDivElement;
+    vi.mocked(createChart).mockImplementation((el) => {
+      containerEl = el as HTMLDivElement;
+      return {
+        addSeries: vi.fn(() => ({ setData: vi.fn() })),
+        applyOptions: vi.fn(),
+        subscribeClick: vi.fn(),
+        priceScale,
+        timeScale: vi.fn(() => ({ setVisibleLogicalRange: vi.fn(), getVisibleLogicalRange: vi.fn(() => ({ from: 0, to: 10 })) })),
+        remove: vi.fn(),
+      } as unknown as ReturnType<typeof createChart>;
+    });
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    vi.spyOn(containerEl, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, right: 300, bottom: 300, width: 300, height: 300, x: 0, y: 0, toJSON: () => '',
+    });
+
+    // Touch starting inside the rightmost 50px (the price-scale width) while getVisibleRange() is still null.
+    const touchStart = new Event('touchstart', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchStart, 'touches', { value: [{ clientX: 280, clientY: 100 }] });
+    containerEl.dispatchEvent(touchStart);
+
+    const touchMove = new Event('touchmove', { bubbles: true }) as unknown as TouchEvent;
+    Object.defineProperty(touchMove, 'touches', { value: [{ clientX: 280, clientY: 60 }] });
+    containerEl.dispatchEvent(touchMove);
+
+    expect(setAutoScale).not.toHaveBeenCalled();
+    expect(setVisibleRange).not.toHaveBeenCalled();
   });
 
   it('zooms only the time scale when a touch drag starts in the time-axis region', () => {

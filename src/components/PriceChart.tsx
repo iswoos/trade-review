@@ -124,9 +124,14 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       const y = touch.clientY - rect.top;
 
       if (x >= rect.width - rightScale.width()) {
-        dragMode = 'price';
-        rightScale.setAutoScale(false);
-        dragStartPriceRange = rightScale.getVisibleRange();
+        const currentRange = rightScale.getVisibleRange();
+        if (currentRange) {
+          dragMode = 'price';
+          rightScale.setAutoScale(false);
+          dragStartPriceRange = currentRange;
+        } else {
+          dragMode = null;
+        }
       } else if (y >= rect.height - TIME_AXIS_HEIGHT) {
         dragMode = 'time';
         dragStartLogicalRange = timeScale.getVisibleLogicalRange();
