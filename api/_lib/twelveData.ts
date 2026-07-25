@@ -75,3 +75,19 @@ export async function twelveDataSearch(
   const data = (await twelveDataFetch('symbol_search', { symbol: query })) as TwelveDataSearchResponse;
   return data.data.map((r) => ({ symbol: r.symbol, name: r.instrument_name, exchange: r.exchange ?? '' }));
 }
+
+export async function twelveDataFxRate(date: string): Promise<number> {
+  const to = new Date(date);
+  const from = new Date(to);
+  from.setDate(from.getDate() - 7);
+  const data = (await twelveDataFetch('time_series', {
+    symbol: 'USD/KRW',
+    interval: '1day',
+    start_date: from.toISOString().slice(0, 10),
+    end_date: date,
+  })) as TwelveDataTimeSeriesResponse;
+  if (data.values.length === 0) {
+    throw new Error(`No USD/KRW rate available near ${date}`);
+  }
+  return Number(data.values[0].close);
+}
