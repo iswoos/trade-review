@@ -79,7 +79,7 @@ describe('PriceChart', () => {
 
   it('uses the final candle/MA color palette and circle markers for trades', () => {
     vi.clearAllMocks();
-    const addSeriesSpy = vi.fn(() => ({ setData: vi.fn() }));
+    const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));
     const createSeriesMarkersSpy = vi.mocked(createSeriesMarkers);
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
