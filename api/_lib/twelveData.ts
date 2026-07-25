@@ -58,7 +58,7 @@ export async function twelveDataHistory(
   const data = (await twelveDataFetch('time_series', {
     symbol,
     interval: '1day',
-    outputsize: '365',
+    outputsize: '5000',
   })) as TwelveDataTimeSeriesResponse;
   return [...data.values].reverse().map((v) => ({
     date: v.datetime,
