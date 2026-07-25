@@ -138,6 +138,37 @@ describe('PriceChart', () => {
     ]);
   });
 
+  it('collapses same-day, same-side trades into a single marker with a count instead of stacking', () => {
+    const createSeriesMarkersSpy = vi.mocked(createSeriesMarkers);
+    createSeriesMarkersSpy.mockClear();
+
+    const baseTrade = {
+      ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetimeUnknown: false, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    render(
+      <PriceChart
+        history={[{ date: '2026-01-01', open: 10, high: 12, low: 9, close: 11 }]}
+        trades={[
+          { ...baseTrade, id: '1', side: 'buy', price: 11, datetime: '2026-01-01T00:00:00.000Z' },
+          { ...baseTrade, id: '2', side: 'buy', price: 11.5, datetime: '2026-01-01T05:00:00.000Z' },
+          { ...baseTrade, id: '3', side: 'sell', price: 12, datetime: '2026-01-01T06:00:00.000Z' },
+        ]}
+        avgCost={null}
+        onPointSelect={() => {}}
+      />
+    );
+
+    const [, markers] = createSeriesMarkersSpy.mock.calls[0];
+    expect(markers).toEqual([
+      expect.objectContaining({ position: 'belowBar', color: '#10b981', text: '매수 ×2' }),
+      expect.objectContaining({ position: 'aboveBar', color: '#a855f7', text: '매도' }),
+    ]);
+  });
+
   it('suppresses the avg-cost line price-axis last-value badge too', () => {
     vi.clearAllMocks();
     const addSeriesSpy = vi.fn((_seriesType?: unknown, _options?: unknown) => ({ setData: vi.fn() }));

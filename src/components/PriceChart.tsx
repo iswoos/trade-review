@@ -102,18 +102,37 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       ]);
     }
 
+    // Multiple same-day, same-side trades used to render as separate stacked
+    // markers; lightweight-charts offsets each additional marker on the same
+    // bar progressively further away, which read as an awkward, disconnected
+    // gap rather than a single event. Grouping by (date, side) keeps exactly
+    // one marker per bar per side.
+    const markerGroups = new Map<string, { time: string; side: Trade['side']; count: number }>();
+    for (const t of trades) {
+      if (!t.datetime) continue;
+      const time = t.datetime.slice(0, 10);
+      const key = `${time}|${t.side}`;
+      const existing = markerGroups.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        markerGroups.set(key, { time, side: t.side, count: 1 });
+      }
+    }
+
     createSeriesMarkers(
       candleSeries,
-      trades
-        .filter((t) => t.datetime)
-        .map((t) => ({
-          time: (t.datetime as string).slice(0, 10),
-          position: t.side === 'buy' ? ('belowBar' as const) : ('aboveBar' as const),
-          color: t.side === 'buy' ? '#10b981' : '#a855f7',
+      [...markerGroups.values()].map((group) => {
+        const label = group.side === 'buy' ? '매수' : '매도';
+        return {
+          time: group.time,
+          position: group.side === 'buy' ? ('belowBar' as const) : ('aboveBar' as const),
+          color: group.side === 'buy' ? '#10b981' : '#a855f7',
           shape: 'circle' as const,
           size: 2,
-          text: t.side === 'buy' ? '매수' : '매도',
-        }))
+          text: group.count > 1 ? `${label} ×${group.count}` : label,
+        };
+      })
     );
 
     const rightScale = chart.priceScale('right');
