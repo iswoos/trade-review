@@ -6,6 +6,8 @@ export interface Tag {
   id: string;
   name: string;
   archived: boolean;
+  createdAt: string; // ISO datetime string
+  order: number; // For maintaining insertion order
 }
 
 export interface Trade {

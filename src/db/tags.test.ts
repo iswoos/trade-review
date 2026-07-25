@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from './schema';
-import { createTag, renameTag, archiveTag, listActiveTags, listAllTags } from './tags';
+import { createTag, renameTag, archiveTag, listActiveTags, listAllTags, seedDefaultTags } from './tags';
 
 let db: IDBPDatabase<TradeReviewDB>;
 
@@ -39,5 +39,22 @@ describe('tags', () => {
     const all = await listAllTags(db);
     expect(active.find((t) => t.id === tag.id)).toBeUndefined();
     expect(all.find((t) => t.id === tag.id)?.archived).toBe(true);
+  });
+});
+
+describe('seedDefaultTags', () => {
+  it('creates the 8 default tags, in order, when the tag store is empty', async () => {
+    await seedDefaultTags(db);
+    const all = await listAllTags(db);
+    expect(all.map((t) => t.name)).toEqual([
+      '잘 모르겠음', '익절', '손절', '실적발표', '뉴스/이슈', '기술적분석', '거시경제', '리밸런싱',
+    ]);
+  });
+
+  it('does not seed again (or duplicate) if any tag already exists', async () => {
+    await createTag(db, '기존태그');
+    await seedDefaultTags(db);
+    const all = await listAllTags(db);
+    expect(all.map((t) => t.name)).toEqual(['기존태그']);
   });
 });

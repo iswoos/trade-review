@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from './db/schema';
-import { listActiveTags } from './db/tags';
+import { listActiveTags, seedDefaultTags } from './db/tags';
 import { listPositions } from './db/positions';
 import { requestPersistentStorage } from './lib/persistStorage';
 import { fetchQuote } from './api/quotes';
@@ -33,6 +33,7 @@ export function App() {
     requestPersistentStorage();
     openTradeReviewDB().then(async (opened) => {
       setDb(opened);
+      await seedDefaultTags(opened);
       setTags(await listActiveTags(opened));
       await reloadPositions(opened);
     });
