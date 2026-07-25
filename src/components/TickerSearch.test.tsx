@@ -148,18 +148,29 @@ describe('TickerSearch', () => {
   });
 
   it('still debounces a non-Korean query even after a prior Korean-language search', async () => {
-    vi.useFakeTimers();
     vi.mocked(quotes.searchSymbols).mockClear();
     vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
 
     render(<TickerSearch positions={[]} onSelectTicker={vi.fn()} />);
     const input = screen.getByLabelText('종목 검색');
 
+    // A Korean-language search first - instant, no timer involved.
+    fireEvent.change(input, { target: { value: '삼성' } });
+    expect(quotes.searchSymbols).toHaveBeenCalledTimes(1);
+    expect(quotes.searchSymbols).toHaveBeenLastCalledWith('삼성');
+
+    vi.useFakeTimers();
+    vi.mocked(quotes.searchSymbols).mockClear();
+
+    // A subsequent non-Korean query must still debounce, unaffected by the
+    // earlier instant Korean search.
     fireEvent.change(input, { target: { value: 'j' } });
     expect(quotes.searchSymbols).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(500);
     expect(quotes.searchSymbols).toHaveBeenCalledTimes(1);
+    expect(quotes.searchSymbols).toHaveBeenLastCalledWith('j');
+
     vi.useRealTimers();
   });
 });
