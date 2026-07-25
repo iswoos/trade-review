@@ -817,4 +817,75 @@ describe('PriceChart', () => {
     expect(firstRemove).toHaveBeenCalledOnce();
     expect(createChart).toHaveBeenCalledTimes(2);
   });
+
+  it('calls onPointSelect when a trade arrow is clicked in a non-day (weekly) view', async () => {
+    const timeToCoordinate = vi.fn((time: string) => (time === '2026-07-13' ? 50 : null));
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate,
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    const history = [
+      { date: '2026-07-13', open: 10, high: 12, low: 9, close: 11 }, // Monday, week-bucket start
+      { date: '2026-07-14', open: 11, high: 13, low: 10, close: 12 }, // Tuesday, same week
+    ];
+    const trade = {
+      id: '1', ticker: 'JOBY', market: 'US' as const, name: '조비', currency: 'USD' as const,
+      datetime: '2026-07-14T00:00:00.000Z', datetimeUnknown: false, side: 'buy' as const,
+      price: 12, quantityType: 'shares' as const, quantityValue: 10, quantity: 10,
+      fxRateAtTrade: null, rationaleTagIds: [], conviction: null, memo: '',
+      attachment: null, recordedAt: '2026-07-14T00:00:00.000Z',
+    };
+    const onPointSelect = vi.fn();
+
+    render(<PriceChart history={history} trades={[trade]} avgCost={null} onPointSelect={onPointSelect} />);
+    await userEvent.click(screen.getByRole('button', { name: '주' }));
+
+    // The trade is dated Tuesday 07-14, but its week's bucket is dated Monday
+    // 07-13 (the arrow renders there) - clicking it must still resolve back
+    // to the actual trade, not silently no-op because the dates differ.
+    await userEvent.click(await screen.findByRole('button', { name: '매수 2026-07-13' }));
+    expect(onPointSelect).toHaveBeenCalledWith(trade);
+  });
+
+  it('computes the moving-average legend from monthly closes when the 월 tab is active', async () => {
+    vi.mocked(createChart).mockReturnValue({
+      addSeries: vi.fn(() => ({ setData: vi.fn() })),
+      applyOptions: vi.fn(),
+      priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
+      timeScale: vi.fn(() => ({
+        setVisibleLogicalRange: vi.fn(),
+        getVisibleLogicalRange: vi.fn(),
+        timeToCoordinate: vi.fn(() => null),
+        subscribeVisibleLogicalRangeChange: vi.fn(),
+        unsubscribeVisibleLogicalRangeChange: vi.fn(),
+      })),
+      remove: vi.fn(),
+    } as unknown as ReturnType<typeof createChart>);
+
+    // One bar per calendar month, 5 consecutive months - closes [10,11,12,13,14].
+    const history = Array.from({ length: 5 }, (_, i) => ({
+      date: `2026-0${i + 1}-15`,
+      open: 10,
+      high: 10,
+      low: 10,
+      close: 10 + i,
+    }));
+
+    render(<PriceChart history={history} trades={[]} avgCost={null} onPointSelect={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: '월' }));
+
+    const legend = await screen.findByTestId('ma-legend');
+    expect(legend).toHaveTextContent('5월');
+    expect(legend).toHaveTextContent('12');
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createChart,
   CandlestickSeries,
@@ -54,6 +54,19 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
   const [arrows, setArrows] = useState<TradeArrow[]>([]);
   const [period, setPeriod] = useState<AggregationPeriod>('day');
+
+  const bucketDateByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const bar of history) {
+      const key = bucketKey(bar.date, period);
+      if (!map.has(key)) map.set(key, bar.date);
+    }
+    return map;
+  }, [history, period]);
+
+  function bucketDateForTrade(tradeDate: string): string | undefined {
+    return bucketDateByKey.get(bucketKey(tradeDate, period));
+  }
 
   useEffect(() => {
     const container = containerRef.current;
@@ -133,16 +146,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     // chart-native markers) decouples their position from price entirely and
     // gives each one its own tap target, so no distance/duration heuristic is
     // needed to tell a tap from a pan/zoom drag.
-    const bucketDateByKey = new Map<string, string>();
-    for (const bar of history) {
-      const key = bucketKey(bar.date, period);
-      if (!bucketDateByKey.has(key)) bucketDateByKey.set(key, bar.date);
-    }
-
-    function bucketDateForTrade(tradeDate: string): string | undefined {
-      return bucketDateByKey.get(bucketKey(tradeDate, period));
-    }
-
     function computeArrows() {
       const groups = new Map<string, { buy: number; sell: number }>();
       for (const t of trades) {
@@ -249,7 +252,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   }, [history, trades, avgCost, onPointSelect, period]);
 
   function selectArrowGroup(time: string, side: Trade['side']) {
-    const match = trades.find((t) => t.side === side && t.datetime?.slice(0, 10) === time);
+    const match = trades.find(
+      (t) => t.side === side && t.datetime != null && bucketDateForTrade(t.datetime.slice(0, 10)) === time
+    );
     if (match) onPointSelect(match);
   }
 
