@@ -91,7 +91,7 @@ describe('App', () => {
     await screen.findByTestId('price-chart');
     await waitFor(() => expect(hasAvgCostLine()).toBe(false)); // no position yet: no avg-cost line
 
-    await userEvent.click(screen.getByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ 기록 추가' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
     await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
     await userEvent.click(screen.getByRole('button', { name: '저장' }));
@@ -106,14 +106,14 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
 
     // buy 10 shares
-    await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(await screen.findByRole('button', { name: '+ 기록 추가' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
     await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
     await userEvent.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument());
 
     // sell all 10 shares to close the position
-    await userEvent.click(screen.getByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ 기록 추가' }));
     await userEvent.click(screen.getByRole('button', { name: '매도' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
     await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
@@ -189,7 +189,7 @@ describe('App', () => {
 
     await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
     await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
-    await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(await screen.findByRole('button', { name: '+ 기록 추가' }));
 
     expect(await screen.findByRole('button', { name: '장기투자' })).toBeInTheDocument();
   });
