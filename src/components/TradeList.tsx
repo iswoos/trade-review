@@ -7,12 +7,33 @@ interface TradeListProps {
   onSelect: (trade: Trade) => void;
 }
 
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function formatTradeDate(dateStr?: string | null) {
+  if (!dateStr) return { yearMonth: '', formattedDate: '날짜 모름' };
+  const dateOnly = dateStr.slice(0, 10);
+  const parts = dateOnly.split('-');
+  if (parts.length < 3) return { yearMonth: dateOnly, formattedDate: dateOnly };
+
+  const yyyy = parts[0];
+  const mm = parts[1];
+  const dd = parts[2];
+  const d = new Date(`${dateOnly}T00:00:00Z`);
+  const dayName = WEEKDAYS[d.getUTCDay()];
+
+  return {
+    yearMonth: `${yyyy}년 ${mm}월`,
+    formattedDate: `${mm}.${dd} (${dayName})`,
+  };
+}
+
 function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSelect: (trade: Trade) => void }) {
   const [expanded, setExpanded] = useState(false);
   const tagNames = trade.rationaleTagIds
     .map((id) => tags.find((tag) => tag.id === id)?.name)
     .filter((name): name is string => Boolean(name));
-  const dateLabel = (trade.datetime ?? '날짜 모름').slice(0, 10);
+  
+  const { formattedDate } = formatTradeDate(trade.datetime);
   const isBuy = trade.side === 'buy';
   const isNote = trade.side === 'note';
   const currencySymbol = trade.currency === 'KRW' ? '원' : '$';
@@ -26,7 +47,7 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
         type="button"
         onClick={() => onSelect(trade)}
         className="w-full text-left focus:outline-none"
-        aria-label={`${dateLabel} ${isNote ? '메모' : isBuy ? '매수' : '매도'} ${trade.price}`}
+        aria-label={`${trade.datetime ? trade.datetime.slice(0, 10) : ''} ${formattedDate} ${isNote ? '메모' : isBuy ? '매수' : '매도'} ${trade.price}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -37,7 +58,9 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
             >
               {isNote ? '📝 메모' : isBuy ? '매수' : '매도'}
             </span>
-            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{dateLabel}</span>
+            <span className="text-xs font-mono font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-200/50 dark:border-zinc-700/50">
+              {formattedDate}
+            </span>
           </div>
           {!isNote && (
             <div className="text-right">
@@ -193,21 +216,19 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
       <ul aria-label="매매 목록" className="flex flex-col gap-2.5">
         {filteredTrades.length > 0 ? (
           filteredTrades.map((trade, index) => {
-            const tradeYear = trade.datetime ? trade.datetime.slice(0, 4) : '';
-            const prevTradeYear =
-              index > 0 && filteredTrades[index - 1].datetime
-                ? filteredTrades[index - 1].datetime!.slice(0, 4)
-                : null;
-            const isNewYearGroup = tradeYear && tradeYear !== prevTradeYear;
+            const { yearMonth } = formatTradeDate(trade.datetime);
+            const prevYearMonth =
+              index > 0 ? formatTradeDate(filteredTrades[index - 1].datetime).yearMonth : null;
+            const isNewYearMonthGroup = yearMonth && yearMonth !== prevYearMonth;
 
             return (
               <Fragment key={trade.id}>
-                {isNewYearGroup && (
-                  <li className="mt-1.5 mb-0.5 flex items-center gap-2">
-                    <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[0.68rem] font-black text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
-                      📅 {tradeYear}년
+                {isNewYearMonthGroup && (
+                  <li className="mt-2 mb-0.5 flex items-center gap-2">
+                    <span className="rounded-full bg-zinc-900/90 px-3 py-0.5 text-[0.68rem] font-black text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs">
+                      🗓️ {yearMonth}
                     </span>
-                    <div className="h-[1px] flex-1 bg-zinc-200/60 dark:bg-zinc-800/60" />
+                    <div className="h-[1px] flex-1 bg-zinc-200/80 dark:bg-zinc-800/80" />
                   </li>
                 )}
                 <TradeRow trade={trade} tags={tags} onSelect={onSelect} />
