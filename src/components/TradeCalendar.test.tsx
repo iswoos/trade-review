@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { TradeCalendar } from './TradeCalendar';
@@ -48,6 +48,21 @@ describe('TradeCalendar', () => {
     expect(screen.getByText('2025년 11월')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '이전 달' }));
+    expect(screen.getByText('2025년 10월')).toBeInTheDocument();
+  });
+
+  it('swipes left/right to navigate next/prev month', () => {
+    const { container } = render(<TradeCalendar trades={[mockTrade]} onSelect={() => {}} />);
+    const calendarDiv = container.firstChild as HTMLElement;
+
+    // Swipe Left -> Next Month (2025-11)
+    fireEvent.touchStart(calendarDiv, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchEnd(calendarDiv, { changedTouches: [{ clientX: 100, clientY: 100 }] });
+    expect(screen.getByText('2025년 11월')).toBeInTheDocument();
+
+    // Swipe Right -> Prev Month (2025-10)
+    fireEvent.touchStart(calendarDiv, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchEnd(calendarDiv, { changedTouches: [{ clientX: 200, clientY: 100 }] });
     expect(screen.getByText('2025년 10월')).toBeInTheDocument();
   });
 });

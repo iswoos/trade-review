@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { Trade } from '../types';
 
 interface TradeCalendarProps {
@@ -17,6 +17,35 @@ export function TradeCalendar({ trades, onSelect }: TradeCalendarProps) {
 
   const [currentYear, setCurrentYear] = useState(latestTradeDate.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(latestTradeDate.getMonth()); // 0-indexed
+
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Minimum swipe threshold (40px) & horizontal direction primary
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) {
+        nextMonth(); // Swipe Left -> Next Month
+      } else {
+        prevMonth(); // Swipe Right -> Prev Month
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }
 
   // Map trades by YYYY-MM-DD
   const tradesByDate = useMemo(() => {
@@ -88,7 +117,11 @@ export function TradeCalendar({ trades, onSelect }: TradeCalendarProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm select-none touch-pan-y dark:border-zinc-800 dark:bg-zinc-900"
+    >
       {/* Month Navigation Header */}
       <div className="mb-3 flex items-center justify-between">
         <button
