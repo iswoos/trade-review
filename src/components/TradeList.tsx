@@ -243,9 +243,9 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
           </div>
 
           {/* Sort button + list: tightly grouped */}
-          <div className="flex flex-col gap-1.5">
-            {/* Sort order button – right-aligned */}
-            <div className="flex justify-end">
+          <div className="flex flex-col gap-0.5">
+            {/* Sort order button – right-aligned, close to the list underline below */}
+            <div className="flex justify-end -mb-1">
               <button
                 type="button"
                 onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
@@ -267,7 +267,7 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
                   return (
                     <Fragment key={trade.id}>
                       {isNewYearMonthGroup && (
-                        <li className="mt-0.5 mb-0.5 flex items-center gap-2">
+                        <li className="mt-0 mb-0.5 flex items-center gap-2">
                           <span className="rounded-full bg-zinc-900/90 px-3 py-0.5 text-[0.68rem] font-black text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs">
                             🗓️ {yearMonth}
                           </span>
