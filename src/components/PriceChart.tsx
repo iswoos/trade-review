@@ -281,9 +281,17 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     if (match) onPointSelect(match);
   }
 
+  // Find trade/memo matching current hovered date
+  const hoveredTrade = useMemo(() => {
+    if (!ohlc?.date) return null;
+    return trades.find(
+      (t) => t.datetime != null && bucketDateForTrade(t.datetime.slice(0, 10)) === ohlc.date
+    );
+  }, [ohlc?.date, trades, bucketDateForTrade]);
+
   return (
     <div>
-      <div role="radiogroup" aria-label="봉 단위" className="mb-1 flex gap-2">
+      <div role="radiogroup" aria-label="봉 단위" className="mb-2 flex gap-2">
         {(Object.keys(PERIOD_LABELS) as AggregationPeriod[]).map((p) => (
           <button
             key={p}
@@ -301,16 +309,71 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         ))}
       </div>
 
-      {ohlc && (
-        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-zinc-100/80 px-2 py-1 text-[0.65rem] font-semibold text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300">
-          <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.date}</span>
-          <span>시 <span className="font-mono">{ohlc.open.toLocaleString()}</span></span>
-          <span>고 <span className="font-mono text-rose-500">{ohlc.high.toLocaleString()}</span></span>
-          <span>저 <span className="font-mono text-blue-500">{ohlc.low.toLocaleString()}</span></span>
-          <span>종 <span className="font-mono font-bold">{ohlc.close.toLocaleString()}</span></span>
-          <span className={ohlc.changePercent >= 0 ? 'font-mono text-rose-500' : 'font-mono text-blue-500'}>
-            ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+      {/* Horizontal Slim Indicator Legend Bar (Outside Chart Canvas, zero obstruction) */}
+      <div
+        data-testid="ma-legend"
+        className="mb-1.5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 px-1.5 text-[0.68rem] text-zinc-600 dark:text-zinc-300 scrollbar-none"
+      >
+        {avgCost != null && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 font-bold text-orange-600 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/30">
+            <span className="inline-block border-b-2 border-dashed border-orange-500 w-2.5" />
+            평단가 {avgCost.toLocaleString()}
           </span>
+        )}
+        {legend.map((entry) => (
+          <span
+            key={entry.label}
+            className="inline-flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 font-semibold dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60"
+            style={{ color: entry.color }}
+          >
+            {entry.label} {entry.value.toLocaleString()}
+          </span>
+        ))}
+      </div>
+
+      {/* Crosshair OHLCV & Trade/Memo Tooltip Bar */}
+      {ohlc && (
+        <div className="mb-2 flex flex-col gap-1 rounded-xl bg-zinc-100/90 p-2 text-[0.68rem] font-semibold text-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.date}</span>
+            <span>시 <span className="font-mono">{ohlc.open.toLocaleString()}</span></span>
+            <span>고 <span className="font-mono text-rose-500">{ohlc.high.toLocaleString()}</span></span>
+            <span>저 <span className="font-mono text-blue-500">{ohlc.low.toLocaleString()}</span></span>
+            <span>종 <span className="font-mono font-bold">{ohlc.close.toLocaleString()}</span></span>
+            <span className={ohlc.changePercent >= 0 ? 'font-mono text-rose-500' : 'font-mono text-blue-500'}>
+              ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+            </span>
+          </div>
+
+          {hoveredTrade && (
+            <div className="flex items-center gap-2 border-t border-zinc-200/60 pt-1 dark:border-zinc-700/60">
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[0.65rem] font-black text-white ${
+                  hoveredTrade.side === 'note'
+                    ? 'bg-amber-600'
+                    : hoveredTrade.side === 'buy'
+                    ? 'bg-buy'
+                    : 'bg-sell'
+                }`}
+              >
+                {hoveredTrade.side === 'note'
+                  ? '📝 메모'
+                  : hoveredTrade.side === 'buy'
+                  ? '🔴 매수'
+                  : '🔵 매도'}
+              </span>
+              {hoveredTrade.side !== 'note' && (
+                <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                  {hoveredTrade.quantity}주 ({hoveredTrade.price.toLocaleString()}원)
+                </span>
+              )}
+              {hoveredTrade.memo && (
+                <span className="truncate italic text-zinc-500 dark:text-zinc-400">
+                  "{hoveredTrade.memo}"
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -320,34 +383,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           data-testid="price-chart"
           style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
         />
-        <div
-          data-testid="ma-legend"
-          className="pointer-events-none absolute left-2 top-2 z-10 rounded-xl border border-zinc-200/90 bg-white/85 px-2.5 py-2 shadow-md backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/85 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
-        >
-          <div className="mb-1 grid grid-cols-2 gap-x-2 border-b border-zinc-200/60 pb-0.5 text-center font-bold text-zinc-500 dark:border-zinc-800/60 dark:text-zinc-400">
-            <span>지표</span>
-            <span>현재값</span>
-          </div>
-          <div className="flex flex-col gap-0.5 font-mono">
-            {avgCost != null && (
-              <div className="grid grid-cols-2 items-center gap-x-2 text-right">
-                <span className="flex items-center gap-1 font-sans font-medium text-orange-600 dark:text-orange-400">
-                  <span className="inline-block border-b-2 border-dashed border-orange-500 w-2.5" />
-                  평단가
-                </span>
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{avgCost.toLocaleString()}</span>
-              </div>
-            )}
-            {legend.map((entry) => (
-              <div key={entry.label} className="grid grid-cols-2 items-center gap-x-2 text-right">
-                <span className="font-semibold" style={{ color: entry.color }}>
-                  {entry.label}
-                </span>
-                <span>{entry.value.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
         <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
           {arrows.map((arrow) => (
             <button
@@ -360,7 +395,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
                 left: arrow.x + arrow.offsetX,
                 transform: 'translateX(-50%)',
                 color: ARROW_COLOR[arrow.side],
-                fontSize: '0.7rem',
+                fontSize: '0.75rem',
                 lineHeight: 1,
                 background: 'none',
                 border: 'none',

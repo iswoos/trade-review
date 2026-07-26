@@ -74,11 +74,12 @@ export function TradeBottomSheet({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative flex flex-col justify-between w-full min-h-[460px] max-h-[85vh] overflow-y-auto rounded-t-3xl border border-zinc-200/80 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+      className="relative flex flex-col justify-between w-full h-[520px] max-h-[85vh] rounded-t-3xl border border-zinc-200/80 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <div>
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto pr-1">
         {/* Modal Top Drag Handle Bar & Close X */}
-        <div className="relative mb-4 flex items-center justify-between pt-1">
+        <div className="relative mb-3 flex items-center justify-between pt-1">
           <div className="w-8" />
           <div className="h-1.5 w-12 rounded-full bg-zinc-300 dark:bg-zinc-700" />
           <button
@@ -179,8 +180,8 @@ export function TradeBottomSheet({
           )}
         </div>
 
-        {/* Memo Container with stable min-height */}
-        <div className="mb-4 min-h-[80px] max-h-36 overflow-y-auto rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 dark:border-zinc-800/80 dark:bg-zinc-800/30">
+        {/* Memo Container */}
+        <div className="mb-4 min-h-[90px] rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 dark:border-zinc-800/80 dark:bg-zinc-800/30">
           <p className="mb-1 text-[0.7rem] font-bold text-zinc-400 dark:text-zinc-500">메모</p>
           {activeTrade.memo ? (
             <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">

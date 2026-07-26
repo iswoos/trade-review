@@ -117,15 +117,15 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
 
                 <div className="grid grid-cols-3 gap-2 rounded-xl bg-zinc-50/80 p-2.5 border border-zinc-100/80 dark:border-zinc-800/50 dark:bg-zinc-800/40 text-[0.72rem]">
                   <div className="flex flex-col">
-                    <span className="text-zinc-400 dark:text-zinc-500">평단가/수량</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono truncate">
-                      {item.avgCost.toLocaleString()} <span className="text-[0.65rem] font-normal text-zinc-400">({formattedQty}주)</span>
+                    <span className="text-zinc-400 dark:text-zinc-500">평단가</span>
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono">
+                      {item.avgCost.toLocaleString()} <span className="text-[0.65rem] font-normal text-zinc-400">원</span>
                     </span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-zinc-400 dark:text-zinc-500">투자금액</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono truncate">
-                      {Math.round(totalInvested).toLocaleString()}
+                    <span className="text-zinc-400 dark:text-zinc-500">보유수량</span>
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono">
+                      {formattedQty} <span className="text-[0.65rem] font-normal text-zinc-400">주</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
@@ -137,7 +137,7 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                             ? 'font-black text-blue-600 dark:text-blue-400 font-mono'
                             : isProfit
                             ? 'font-black text-rose-600 dark:text-rose-400 font-mono'
-                            : 'font-bold text-zinc-700 dark:text-zinc-300 font-mono'
+                            : 'font-bold text-zinc-600 dark:text-zinc-400 font-mono'
                         }
                       >
                         {pnlAmount > 0 ? '+' : ''}
