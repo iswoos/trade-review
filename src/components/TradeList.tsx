@@ -188,9 +188,9 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
         <TradeCalendar trades={trades} onSelect={onSelect} />
       ) : (
         <>
-          {/* Category Filter Chips Bar + Sort Button */}
-          <div className="flex items-center gap-2 border-b border-zinc-100 pb-1 dark:border-zinc-800">
-            <div role="radiogroup" aria-label="기록 필터" className="flex flex-1 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs font-bold scrollbar-none">
+          {/* Category Filter Chips Bar */}
+          <div className="flex flex-col gap-1 border-b border-zinc-100 pb-1 dark:border-zinc-800">
+            <div role="radiogroup" aria-label="기록 필터" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs font-bold scrollbar-none">
               <button
                 type="button"
                 aria-pressed={filter === 'all'}
@@ -241,15 +241,17 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
               </button>
             </div>
 
-            {/* Sort order button – right of filter chips, same row */}
-            <button
-              type="button"
-              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-              className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              title="날짜 정렬 변경"
-            >
-              {sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}
-            </button>
+            {/* Sort order button – below filter chips row, right-aligned */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                title="날짜 정렬 변경"
+              >
+                {sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}
+              </button>
+            </div>
           </div>
 
           <ul aria-label="매매 목록" className="flex flex-col gap-2.5">
