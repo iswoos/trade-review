@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { isKoreanSymbol } from './_lib/marketSymbol.js';
-import { dataGoKrHistory } from './_lib/dataGoKr.js';
+import { yahooFinanceHistory } from './_lib/yahooFinance.js';
 import { twelveDataHistory } from './_lib/twelveData.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   try {
     if (isKoreanSymbol(symbol)) {
-      const rows = await dataGoKrHistory(symbol);
+      const rows = await yahooFinanceHistory(symbol);
       res.status(200).json({
         bars: rows.map((r) => ({ date: r.date, open: r.open, high: r.high, low: r.low, close: r.price })),
       });

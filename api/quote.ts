@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { isKoreanSymbol } from './_lib/marketSymbol.js';
-import { dataGoKrQuote } from './_lib/dataGoKr.js';
+import { yahooFinanceQuote } from './_lib/yahooFinance.js';
 import { twelveDataQuote } from './_lib/twelveData.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   try {
     if (isKoreanSymbol(symbol)) {
-      const quote = await dataGoKrQuote(symbol);
+      const quote = await yahooFinanceQuote(symbol);
       res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'KRW', dailyChangePercent: quote.dailyChangePercent });
       return;
     }
