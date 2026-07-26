@@ -33,9 +33,14 @@ export function TradeBottomSheet({
   const currencySymbol = activeTrade.currency === 'KRW' ? '원' : '$';
   const totalAmount = activeTrade.price * activeTrade.quantity;
   const dateFormatted = activeTrade.datetime ? activeTrade.datetime.slice(0, 10) : '날짜 없음';
-  const timeFormatted = activeTrade.datetime && activeTrade.datetime.includes('T')
-    ? activeTrade.datetime.split('T')[1].slice(0, 5)
-    : '';
+  const timeFormatted =
+    activeTrade.datetime && activeTrade.datetime.includes('T')
+      ? activeTrade.datetime.split('T')[1].slice(0, 5)
+      : '';
+
+  const formattedQuantity = Number.isInteger(activeTrade.quantity)
+    ? activeTrade.quantity.toLocaleString()
+    : Number(activeTrade.quantity.toFixed(4)).toLocaleString();
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartY.current = e.touches[0].clientY;
@@ -62,118 +67,133 @@ export function TradeBottomSheet({
     <div
       role="dialog"
       aria-label="매매 상세"
-      style={{ transform: `translateY(${translateY}px)`, transition: translateY === 0 ? 'transform 0.2s ease-out' : 'none' }}
+      style={{
+        transform: `translateY(${translateY}px)`,
+        transition: translateY === 0 ? 'transform 0.2s ease-out' : 'none',
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full max-h-[85vh] overflow-y-auto rounded-t-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+      className="relative flex flex-col justify-between w-full min-h-[460px] max-h-[85vh] overflow-y-auto rounded-t-3xl border border-zinc-200/80 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <div className="flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-800">
-        <div className="mx-auto h-1.5 w-12 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="닫기"
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-        >
-          ✕
-        </button>
-      </div>
-
-      {availableTrades.length > 1 && (
-        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
-          {availableTrades.map((t, idx) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTrade(t)}
-              className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold transition ${
-                t.id === activeTrade.id
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-              }`}
-            >
-              #{idx + 1} {t.side === 'buy' ? '매수' : t.side === 'sell' ? '매도' : '메모'}
-              {t.side !== 'note' ? ` (${t.price.toLocaleString()}${currencySymbol})` : ''}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className={`whitespace-nowrap shrink-0 rounded-lg px-2.5 py-1 text-xs font-black tracking-wider text-white shadow-sm ${
-              isNote ? 'bg-amber-600 dark:bg-amber-500' : isBuy ? 'bg-buy' : 'bg-sell'
-            }`}
+      <div>
+        {/* Modal Top Drag Handle Bar & Close X */}
+        <div className="relative mb-4 flex items-center justify-between pt-1">
+          <div className="w-8" />
+          <div className="h-1.5 w-12 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100/80 text-sm font-bold text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:bg-zinc-700"
           >
-            {isNote ? '📝 NOTE 메모' : isBuy ? 'BUY 매수' : 'SELL 매도'}
-          </span>
-          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-            {dateFormatted} {timeFormatted}
-          </span>
+            ✕
+          </button>
         </div>
-        <span className="truncate text-sm font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {activeTrade.name} ({activeTrade.ticker})
-        </span>
-      </div>
 
-      {!isNote && (
-        <>
-          <div className="my-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">체결단가</p>
-              <p className="mt-0.5 text-base font-bold text-zinc-900 dark:text-zinc-100">
-                {activeTrade.price.toLocaleString()} {currencySymbol}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-800/50">
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">체결수량</p>
-              <p className="mt-0.5 text-base font-bold text-zinc-900 dark:text-zinc-100">
-                {activeTrade.quantity.toLocaleString()} 주
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-4 flex items-center justify-between rounded-xl bg-zinc-100/70 px-3.5 py-2.5 dark:bg-zinc-800/30">
-            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">총 거래금액</span>
-            <span className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-              {totalAmount.toLocaleString()} {currencySymbol}
-            </span>
-          </div>
-        </>
-      )}
-
-      <div className="my-3">
-        <p className="mb-1.5 text-xs font-bold text-zinc-500 dark:text-zinc-400">
-          {isNote ? '태그' : '매수/매도 이유 태그'}
-        </p>
-        {tagNames.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {tagNames.map((name) => (
-              <span
-                key={name}
-                className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold text-accent dark:bg-accent/20"
+        {availableTrades.length > 1 && (
+          <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">
+            {availableTrades.map((t, idx) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTrade(t)}
+                className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold transition ${
+                  t.id === activeTrade.id
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                    : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
               >
-                #{name}
-              </span>
+                #{idx + 1} {t.side === 'buy' ? '매수' : t.side === 'sell' ? '매도' : '메모'}
+                {t.side !== 'note' ? ` (${t.price.toLocaleString()}${currencySymbol})` : ''}
+              </button>
             ))}
           </div>
-        ) : (
-          <p className="text-xs italic text-zinc-400 dark:text-zinc-500">이 매매, 기억나는 이유가 있나요?</p>
         )}
+
+        {/* Ticker & Side Header */}
+        <div className="mb-4 border-b border-zinc-100 pb-3.5 dark:border-zinc-800/80">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="truncate text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+              {activeTrade.name} <span className="text-sm font-bold text-zinc-400">({activeTrade.ticker})</span>
+            </h3>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={`whitespace-nowrap shrink-0 rounded-lg px-2.5 py-1 text-xs font-black tracking-wider text-white shadow-sm ${
+                isNote ? 'bg-amber-600 dark:bg-amber-500' : isBuy ? 'bg-buy' : 'bg-sell'
+              }`}
+            >
+              {isNote ? '📝 NOTE 메모' : isBuy ? 'BUY 매수' : 'SELL 매도'}
+            </span>
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              {dateFormatted} {timeFormatted}
+            </span>
+          </div>
+        </div>
+
+        {!isNote && (
+          <>
+            <div className="mb-3 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-zinc-50/80 p-3.5 border border-zinc-100 dark:border-zinc-800/50 dark:bg-zinc-800/50">
+                <p className="text-[0.7rem] font-semibold text-zinc-400 dark:text-zinc-500">체결단가</p>
+                <p className="mt-1 text-base font-black text-zinc-900 dark:text-zinc-100 font-mono">
+                  {activeTrade.price.toLocaleString()} <span className="text-xs font-normal text-zinc-500">{currencySymbol}</span>
+                </p>
+              </div>
+              <div className="rounded-2xl bg-zinc-50/80 p-3.5 border border-zinc-100 dark:border-zinc-800/50 dark:bg-zinc-800/50">
+                <p className="text-[0.7rem] font-semibold text-zinc-400 dark:text-zinc-500">체결수량</p>
+                <p className="mt-1 text-base font-black text-zinc-900 dark:text-zinc-100 font-mono">
+                  {formattedQuantity} <span className="text-xs font-normal text-zinc-500">주</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4 flex items-center justify-between rounded-xl bg-zinc-100/80 px-4 py-3 dark:bg-zinc-800/40">
+              <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">총 거래금액</span>
+              <span className="text-base font-black text-zinc-900 dark:text-zinc-100 font-mono">
+                {totalAmount.toLocaleString()} <span className="text-xs font-normal">{currencySymbol}</span>
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* Rationale Tags */}
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+            {isNote ? '태그' : '매수/매도 이유 태그'}
+          </p>
+          {tagNames.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {tagNames.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                >
+                  #{name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs italic text-zinc-400 dark:text-zinc-500">이 매매, 기억나는 이유가 있나요?</p>
+          )}
+        </div>
+
+        {/* Memo Container with stable min-height */}
+        <div className="mb-4 min-h-[80px] max-h-36 overflow-y-auto rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 dark:border-zinc-800/80 dark:bg-zinc-800/30">
+          <p className="mb-1 text-[0.7rem] font-bold text-zinc-400 dark:text-zinc-500">메모</p>
+          {activeTrade.memo ? (
+            <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
+              {activeTrade.memo}
+            </p>
+          ) : (
+            <p className="text-xs italic text-zinc-400 dark:text-zinc-500">작성된 메모가 없습니다.</p>
+          )}
+        </div>
       </div>
 
-      {activeTrade.memo && (
-        <div className="mb-4 max-h-36 overflow-y-auto rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-3.5 dark:border-zinc-800/80 dark:bg-zinc-800/20">
-          <p className="mb-1 text-xs font-bold text-zinc-400 dark:text-zinc-500">메모</p>
-          <p className="text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-            {activeTrade.memo}
-          </p>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2 pt-2">
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
         {onEdit && (
           <button
             type="button"

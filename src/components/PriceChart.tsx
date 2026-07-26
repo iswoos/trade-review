@@ -322,7 +322,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         />
         <div
           data-testid="ma-legend"
-          className="pointer-events-none absolute right-1.5 top-1.5 z-10 rounded-lg border border-zinc-200/80 bg-white/90 p-1.5 shadow-md backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/90 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
+          className="pointer-events-none absolute left-2 top-2 z-10 rounded-xl border border-zinc-200/90 bg-white/85 px-2.5 py-2 shadow-md backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/85 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
         >
           <div className="mb-1 grid grid-cols-2 gap-x-2 border-b border-zinc-200/60 pb-0.5 text-center font-bold text-zinc-500 dark:border-zinc-800/60 dark:text-zinc-400">
             <span>지표</span>
