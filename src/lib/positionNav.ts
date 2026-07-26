@@ -6,6 +6,7 @@ export interface PositionListItem {
   lastTradeAt: string;
   lastTradeRecordedAt?: string;
   currentPrice: number | null;
+  dailyChangePercent?: number | null;
   buyCnt: number;
   sellCnt: number;
   noteCnt: number;

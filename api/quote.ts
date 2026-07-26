@@ -12,11 +12,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (isKoreanSymbol(symbol)) {
       const quote = await dataGoKrQuote(symbol);
-      res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'KRW' });
+      res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'KRW', dailyChangePercent: quote.dailyChangePercent });
       return;
     }
     const quote = await twelveDataQuote(symbol);
-    res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'USD' });
+    res.status(200).json({ symbol: quote.symbol, price: quote.price, currency: 'USD', dailyChangePercent: quote.dailyChangePercent });
   } catch {
     res.status(502).json({ error: 'Quote lookup failed' });
   }

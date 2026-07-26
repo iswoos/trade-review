@@ -15,7 +15,7 @@ export function App() {
   const [db, setDb] = useState<IDBPDatabase<TradeReviewDB> | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [prices, setPrices] = useState<Record<string, number | null>>({});
+  const [quotes, setQuotes] = useState<Record<string, { price: number | null; dailyChangePercent?: number | null }>>({});
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
   const [screen, setScreen] = useState<'home' | 'chart' | 'tags'>('home');
   const [activeTicker, setActiveTicker] = useState<string | null>(null);
@@ -25,9 +25,12 @@ export function App() {
     const pos = await listPositions(database);
     setPositions(pos);
     const entries = await Promise.all(
-      pos.map(async (p): Promise<[string, number | null]> => [p.ticker, (await fetchQuote(p.ticker))?.price ?? null])
+      pos.map(async (p): Promise<[string, { price: number | null; dailyChangePercent?: number | null }]> => {
+        const q = await fetchQuote(p.ticker);
+        return [p.ticker, { price: q?.price ?? null, dailyChangePercent: q?.dailyChangePercent ?? null }];
+      })
     );
-    setPrices(Object.fromEntries(entries));
+    setQuotes(Object.fromEntries(entries));
   }
 
   useEffect(() => {
@@ -82,12 +85,13 @@ export function App() {
           totalQuantity: p.totalQuantity,
           lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
           lastTradeRecordedAt: p.lastTradeRecordedAt,
-          currentPrice: prices[p.ticker] ?? null,
+          currentPrice: quotes[p.ticker]?.price ?? null,
+          dailyChangePercent: quotes[p.ticker]?.dailyChangePercent ?? null,
           buyCnt: p.buyCnt,
           sellCnt: p.sellCnt,
           noteCnt: p.noteCnt,
         })),
-    [positions, prices]
+    [positions, quotes]
   );
 
   function handleSelectTicker(ticker: string, name: string) {

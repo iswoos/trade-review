@@ -5,6 +5,7 @@ interface DataGoKrStockPriceRow {
   mkp: string;
   hipr: string;
   lopr: string;
+  flttRt?: string;
 }
 
 interface DataGoKrResponse {
@@ -54,11 +55,18 @@ async function dataGoKrFetch(
   return { rows, totalCount: data.response.body?.totalCount ?? 0 };
 }
 
-export async function dataGoKrQuote(symbol: string): Promise<{ symbol: string; price: number }> {
+export async function dataGoKrQuote(
+  symbol: string
+): Promise<{ symbol: string; price: number; dailyChangePercent: number | null }> {
   const { rows } = await dataGoKrFetch({ likeSrtnCd: stripKrSuffix(symbol), numOfRows: '10', pageNo: '1' });
   if (!rows[0]) throw new Error(`data.go.kr quote returned no data for ${symbol}`);
   const latest = rows.reduce((max, r) => (r.basDt > max.basDt ? r : max));
-  return { symbol, price: Number(latest.clpr.replace(/,/g, '')) };
+  const percent = latest.flttRt ? Number(latest.flttRt) : null;
+  return {
+    symbol,
+    price: Number(latest.clpr.replace(/,/g, '')),
+    dailyChangePercent: percent != null && !Number.isNaN(percent) ? percent : null,
+  };
 }
 
 export async function dataGoKrHistory(

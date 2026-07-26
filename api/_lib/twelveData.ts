@@ -1,6 +1,7 @@
 interface TwelveDataQuoteResponse {
   symbol: string;
   close: string;
+  percent_change?: string;
 }
 
 interface TwelveDataTimeSeriesValue {
@@ -47,9 +48,16 @@ async function twelveDataFetch(path: string, params: Record<string, string>): Pr
   return data;
 }
 
-export async function twelveDataQuote(symbol: string): Promise<{ symbol: string; price: number }> {
+export async function twelveDataQuote(
+  symbol: string
+): Promise<{ symbol: string; price: number; dailyChangePercent: number | null }> {
   const data = (await twelveDataFetch('quote', { symbol })) as TwelveDataQuoteResponse;
-  return { symbol: data.symbol, price: Number(data.close) };
+  const percent = data.percent_change ? Number(data.percent_change) : null;
+  return {
+    symbol: data.symbol,
+    price: Number(data.close),
+    dailyChangePercent: percent != null && !Number.isNaN(percent) ? percent : null,
+  };
 }
 
 export async function twelveDataHistory(

@@ -7,6 +7,7 @@ export interface SymbolResult {
 export interface QuoteResult {
   price: number | null;
   currency: 'USD' | 'KRW' | null;
+  dailyChangePercent?: number | null;
 }
 
 export interface HistoryBar {

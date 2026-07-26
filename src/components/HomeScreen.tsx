@@ -74,6 +74,10 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
           const isLoss = pnlPercent != null && pnlPercent < 0;
           const isProfit = pnlPercent != null && pnlPercent > 0;
 
+          const dailyChange = item.dailyChangePercent;
+          const isDailyLoss = dailyChange != null && dailyChange < 0;
+          const isDailyProfit = dailyChange != null && dailyChange > 0;
+
           const formattedQty = Number.isInteger(totalQuantity)
             ? totalQuantity.toLocaleString()
             : Number(totalQuantity.toFixed(2)).toLocaleString();
@@ -98,19 +102,22 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                         {item.currentPrice.toLocaleString()}
                       </span>
                     )}
-                    {pnlPercent != null && (
+                    {dailyChange != null ? (
                       <span
                         className={
-                          isLoss
-                            ? 'mt-0.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-black text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
-                            : isProfit
-                            ? 'mt-0.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-black text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+                          isDailyLoss
+                            ? 'mt-0.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
+                            : isDailyProfit
+                            ? 'mt-0.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
                             : 'mt-0.5 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
                         }
+                        title="전일 대비 등락률"
                       >
-                        {pnlPercent > 0 ? '+' : ''}
-                        {pnlPercent.toFixed(1)}%
+                        {dailyChange > 0 ? '+' : ''}
+                        {dailyChange.toFixed(2)}%
                       </span>
+                    ) : (
+                      <span className="mt-0.5 text-[0.68rem] text-zinc-400 font-medium">전일대비 -</span>
                     )}
                   </div>
                 </div>
@@ -131,20 +138,35 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-zinc-400 dark:text-zinc-500">평가손익</span>
+                      <span className="text-zinc-400 dark:text-zinc-500">평가손익 (수익률)</span>
                       {pnlAmount != null ? (
-                        <span
-                          className={
-                            isLoss
-                              ? 'font-black text-blue-600 dark:text-blue-400 font-mono'
-                              : isProfit
-                              ? 'font-black text-rose-600 dark:text-rose-400 font-mono'
-                              : 'font-bold text-zinc-600 dark:text-zinc-400 font-mono'
-                          }
-                        >
-                          {pnlAmount > 0 ? '+' : ''}
-                          {pnlAmount.toLocaleString()}
-                        </span>
+                        <div className="flex flex-wrap items-center justify-end gap-1">
+                          <span
+                            className={
+                              isLoss
+                                ? 'font-black text-blue-600 dark:text-blue-400 font-mono'
+                                : isProfit
+                                ? 'font-black text-rose-600 dark:text-rose-400 font-mono'
+                                : 'font-bold text-zinc-600 dark:text-zinc-400 font-mono'
+                            }
+                          >
+                            {pnlAmount > 0 ? '+' : ''}
+                            {pnlAmount.toLocaleString()}
+                          </span>
+                          {pnlPercent != null && (
+                            <span
+                              className={
+                                isLoss
+                                  ? 'text-[0.68rem] font-bold text-blue-600 dark:text-blue-400 font-mono'
+                                  : isProfit
+                                  ? 'text-[0.68rem] font-bold text-rose-600 dark:text-rose-400 font-mono'
+                                  : 'text-[0.68rem] font-bold text-zinc-500 dark:text-zinc-400 font-mono'
+                              }
+                            >
+                              ({pnlPercent > 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-zinc-400 font-mono">-</span>
                       )}
