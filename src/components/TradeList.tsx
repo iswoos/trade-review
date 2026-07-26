@@ -242,46 +242,49 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
             </div>
           </div>
 
-          {/* Sort order button – below the border line, right-aligned */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-              className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              title="날짜 정렬 변경"
-            >
-              {sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}
-            </button>
+          {/* Sort button + list: tightly grouped */}
+          <div className="flex flex-col gap-1.5">
+            {/* Sort order button – right-aligned */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                title="날짜 정렬 변경"
+              >
+                {sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}
+              </button>
+            </div>
+
+            <ul aria-label="매매 목록" className="flex flex-col gap-2.5">
+              {filteredTrades.length > 0 ? (
+                filteredTrades.map((trade, index) => {
+                  const { yearMonth } = formatTradeDate(trade.datetime);
+                  const prevYearMonth =
+                    index > 0 ? formatTradeDate(filteredTrades[index - 1].datetime).yearMonth : null;
+                  const isNewYearMonthGroup = yearMonth && yearMonth !== prevYearMonth;
+
+                  return (
+                    <Fragment key={trade.id}>
+                      {isNewYearMonthGroup && (
+                        <li className="mt-0.5 mb-0.5 flex items-center gap-2">
+                          <span className="rounded-full bg-zinc-900/90 px-3 py-0.5 text-[0.68rem] font-black text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs">
+                            🗓️ {yearMonth}
+                          </span>
+                          <div className="h-[1px] flex-1 bg-zinc-200/80 dark:bg-zinc-800/80" />
+                        </li>
+                      )}
+                      <TradeRow trade={trade} tags={tags} onSelect={onSelect} />
+                    </Fragment>
+                  );
+                })
+              ) : (
+                <li className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs italic text-zinc-400 dark:border-zinc-800">
+                  해당하는 기록 내역이 없습니다.
+                </li>
+              )}
+            </ul>
           </div>
-
-          <ul aria-label="매매 목록" className="flex flex-col gap-2.5">
-            {filteredTrades.length > 0 ? (
-              filteredTrades.map((trade, index) => {
-                const { yearMonth } = formatTradeDate(trade.datetime);
-                const prevYearMonth =
-                  index > 0 ? formatTradeDate(filteredTrades[index - 1].datetime).yearMonth : null;
-                const isNewYearMonthGroup = yearMonth && yearMonth !== prevYearMonth;
-
-                return (
-                  <Fragment key={trade.id}>
-                    {isNewYearMonthGroup && (
-                      <li className="mt-2 mb-0.5 flex items-center gap-2">
-                        <span className="rounded-full bg-zinc-900/90 px-3 py-0.5 text-[0.68rem] font-black text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs">
-                          🗓️ {yearMonth}
-                        </span>
-                        <div className="h-[1px] flex-1 bg-zinc-200/80 dark:bg-zinc-800/80" />
-                      </li>
-                    )}
-                    <TradeRow trade={trade} tags={tags} onSelect={onSelect} />
-                  </Fragment>
-                );
-              })
-            ) : (
-              <li className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs italic text-zinc-400 dark:border-zinc-800">
-                해당하는 기록 내역이 없습니다.
-              </li>
-            )}
-          </ul>
         </>
       )}
     </div>
