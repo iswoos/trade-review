@@ -61,31 +61,40 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
           const totalInvested = item.avgCost * totalQuantity;
           const totalEvaluation =
             item.currentPrice != null ? item.currentPrice * totalQuantity : null;
-          const pnlAmount =
+          const rawPnl =
             totalEvaluation != null ? totalEvaluation - totalInvested : null;
-          const pnlPercent =
+          const pnlAmount = rawPnl != null ? (Math.abs(rawPnl) < 0.5 ? 0 : Math.round(rawPnl)) : null;
+
+          const rawPnlPercent =
             item.currentPrice != null && item.avgCost > 0
               ? ((item.currentPrice - item.avgCost) / item.avgCost) * 100
               : null;
+          const pnlPercent = rawPnlPercent != null ? (Math.abs(rawPnlPercent) < 0.05 ? 0 : rawPnlPercent) : null;
+
           const isLoss = pnlPercent != null && pnlPercent < 0;
+          const isProfit = pnlPercent != null && pnlPercent > 0;
+
+          const formattedQty = Number.isInteger(totalQuantity)
+            ? totalQuantity.toLocaleString()
+            : Number(totalQuantity.toFixed(2)).toLocaleString();
 
           return (
             <li key={item.ticker}>
               <button
                 type="button"
                 onClick={() => onSelectTicker(item.ticker, item.name)}
-                className="flex w-full flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm shadow-zinc-900/5 transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
+                className="flex w-full flex-col gap-2.5 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-sm transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <div className="flex items-start justify-between w-full">
                   <div className="flex flex-col">
-                    <span className="text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    <span className="text-base font-black tracking-tight text-zinc-900 dark:text-zinc-50">
                       {item.ticker}
                     </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{item.name}</span>
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{item.name}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     {item.currentPrice != null && (
-                      <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50 font-mono">
+                      <span className="text-base font-extrabold text-zinc-900 dark:text-zinc-50 font-mono">
                         {item.currentPrice.toLocaleString()}
                       </span>
                     )}
@@ -94,26 +103,28 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                         className={
                           isLoss
                             ? 'mt-0.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-black text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
-                            : 'mt-0.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-black text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+                            : isProfit
+                            ? 'mt-0.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-black text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+                            : 'mt-0.5 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
                         }
                       >
-                        {pnlPercent >= 0 ? '+' : ''}
+                        {pnlPercent > 0 ? '+' : ''}
                         {pnlPercent.toFixed(1)}%
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-1 grid grid-cols-3 gap-2 rounded-xl bg-zinc-50/80 p-2.5 dark:bg-zinc-800/40 text-[0.72rem]">
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-zinc-50/80 p-2.5 border border-zinc-100/80 dark:border-zinc-800/50 dark:bg-zinc-800/40 text-[0.72rem]">
                   <div className="flex flex-col">
                     <span className="text-zinc-400 dark:text-zinc-500">평단가/수량</span>
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
-                      {item.avgCost.toLocaleString()} / {item.totalQuantity}주
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono truncate">
+                      {item.avgCost.toLocaleString()} <span className="text-[0.65rem] font-normal text-zinc-400">({formattedQty}주)</span>
                     </span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-zinc-400 dark:text-zinc-500">투자금액</span>
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono truncate">
                       {Math.round(totalInvested).toLocaleString()}
                     </span>
                   </div>
@@ -123,12 +134,14 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                       <span
                         className={
                           isLoss
-                            ? 'font-bold text-blue-600 dark:text-blue-400 font-mono'
-                            : 'font-bold text-rose-600 dark:text-rose-400 font-mono'
+                            ? 'font-black text-blue-600 dark:text-blue-400 font-mono'
+                            : isProfit
+                            ? 'font-black text-rose-600 dark:text-rose-400 font-mono'
+                            : 'font-bold text-zinc-700 dark:text-zinc-300 font-mono'
                         }
                       >
-                        {pnlAmount >= 0 ? '+' : ''}
-                        {Math.round(pnlAmount).toLocaleString()}
+                        {pnlAmount > 0 ? '+' : ''}
+                        {pnlAmount.toLocaleString()}
                       </span>
                     ) : (
                       <span className="text-zinc-400 font-mono">-</span>
