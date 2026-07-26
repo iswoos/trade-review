@@ -89,6 +89,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     low: number;
     close: number;
     changePercent: number;
+    openPercent: number;
+    highPercent: number;
+    lowPercent: number;
   } | null>(null);
 
   const bucketDateByKey = useMemo(() => {
@@ -197,6 +200,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         const idx = aggregated.findIndex((b) => b.date === currentDate);
         const prevClose = idx > 0 ? aggregated[idx - 1].close : data.open;
         const changePercent = prevClose > 0 ? ((data.close - prevClose) / prevClose) * 100 : 0;
+        const openPercent = prevClose > 0 ? ((data.open - prevClose) / prevClose) * 100 : 0;
+        const highPercent = prevClose > 0 ? ((data.high - prevClose) / prevClose) * 100 : 0;
+        const lowPercent = prevClose > 0 ? ((data.low - prevClose) / prevClose) * 100 : 0;
 
         setOhlc({
           date: currentDate,
@@ -205,6 +211,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           low: data.low,
           close: data.close,
           changePercent,
+          openPercent,
+          highPercent,
+          lowPercent,
         });
       } else {
         setOhlc(null);
@@ -509,11 +518,47 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.68rem]">
-            <span>시가 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.open.toLocaleString()}</span></span>
-            <span>고가 <span className="font-bold text-rose-500">{ohlc.high.toLocaleString()}</span></span>
-            <span>저가 <span className="font-bold text-blue-500">{ohlc.low.toLocaleString()}</span></span>
-            <span>종가 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.close.toLocaleString()}</span></span>
+          {/* 2x2 Grid with OHLC values + % vs prevClose */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[0.68rem]">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">시가</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.open.toLocaleString()}</span>
+                <span className={`text-[0.62rem] ${ohlc.openPercent >= 0 ? 'text-rose-500' : 'text-blue-500'}`}>
+                  ({ohlc.openPercent >= 0 ? '+' : ''}{ohlc.openPercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">고가</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-rose-500">{ohlc.high.toLocaleString()}</span>
+                <span className={`text-[0.62rem] ${ohlc.highPercent >= 0 ? 'text-rose-500' : 'text-blue-500'}`}>
+                  ({ohlc.highPercent >= 0 ? '+' : ''}{ohlc.highPercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">저가</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-blue-500">{ohlc.low.toLocaleString()}</span>
+                <span className={`text-[0.62rem] ${ohlc.lowPercent >= 0 ? 'text-rose-500' : 'text-blue-500'}`}>
+                  ({ohlc.lowPercent >= 0 ? '+' : ''}{ohlc.lowPercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">종가</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.close.toLocaleString()}</span>
+                <span className={`text-[0.62rem] ${ohlc.changePercent >= 0 ? 'text-rose-500' : 'text-blue-500'}`}>
+                  ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
           </div>
 
           {hoveredTrades.length > 0 && (
