@@ -68,20 +68,14 @@ export async function yahooFinanceQuote(
   const result = await yahooChartFetch(ySym, { interval: '1d', range: '5d' });
   const price = result.meta.regularMarketPrice;
 
-  // 1순위: API가 직접 등락률을 내려주는 경우
-  let dailyChangePercent: number | null = null;
-  if (result.meta.regularMarketChangePercent != null) {
-    dailyChangePercent = result.meta.regularMarketChangePercent;
-  } else {
-    // 2순위: 전일 종가로 직접 계산 (필드명 후보 순서대로 시도)
-    const prevClose =
-      result.meta.chartPreviousClose ??
-      result.meta.previousClose ??
-      result.meta.regularMarketPreviousClose;
-    if (prevClose && prevClose !== 0) {
-      dailyChangePercent = ((price - prevClose) / prevClose) * 100;
-    }
-  }
+  // 전일 종가: regularMarketPreviousClose → chartPreviousClose → previousClose 순으로 시도
+  const prevClose =
+    result.meta.regularMarketPreviousClose ??
+    result.meta.chartPreviousClose ??
+    result.meta.previousClose;
+
+  const dailyChangePercent =
+    prevClose && prevClose !== 0 ? ((price - prevClose) / prevClose) * 100 : null;
 
   return {
     symbol,
