@@ -17,6 +17,9 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
   const isNote = trade.side === 'note';
   const currencySymbol = trade.currency === 'KRW' ? '원' : '$';
 
+  const lineCount = trade.memo ? trade.memo.split('\n').length : 0;
+  const isOverflowing = (trade.memo && trade.memo.length > 50) || lineCount > 3;
+
   return (
     <li className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
       <button
@@ -72,21 +75,23 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
             className={
               expanded
                 ? 'text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap'
-                : 'line-clamp-3 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed'
+                : 'line-clamp-3 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap'
             }
           >
             {trade.memo}
           </p>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded((prev) => !prev);
-            }}
-            className="mt-1 text-xs font-bold text-accent hover:underline"
-          >
-            {expanded ? '접기' : '더보기'}
-          </button>
+          {isOverflowing && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((prev) => !prev);
+              }}
+              className="mt-1.5 text-xs font-bold text-accent hover:underline"
+            >
+              {expanded ? '접기' : '더보기'}
+            </button>
+          )}
         </div>
       )}
     </li>
