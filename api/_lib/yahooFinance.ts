@@ -5,12 +5,8 @@
 
 interface YahooChartMeta {
   regularMarketPrice: number;
-  // Yahoo Finance가 상황에 따라 다른 필드명으로 전일 종가를 내려줌
-  previousClose?: number;
-  chartPreviousClose?: number;
-  regularMarketPreviousClose?: number;
-  // 등락률을 직접 내려주는 경우도 있음
-  regularMarketChangePercent?: number;
+  regularMarketTime: number;
+  gmtoffset: number;
   currency: string;
 }
 
@@ -67,7 +63,22 @@ export async function yahooFinanceQuote(
   const ySym = ensureYahooSuffix(symbol);
   const result = await yahooChartFetch(ySym, { interval: '1d', range: '5d' });
   const price = result.meta.regularMarketPrice;
-  const prevClose = result.meta.regularMarketPreviousClose;
+
+  // meta의 previousClose 계열 필드는 종목에 따라 누락되거나 실제 봉 데이터와
+  // 어긋나는 경우가 있어, 실제 일봉 종가에서 오늘 이전 마지막 거래일 종가를 찾는다.
+  const { gmtoffset } = result.meta;
+  const todayKey = new Date((result.meta.regularMarketTime + gmtoffset) * 1000).toISOString().slice(0, 10);
+  const timestamps = result.timestamp ?? [];
+  const closes = result.indicators?.quote[0]?.close ?? [];
+  let prevClose: number | undefined;
+  for (let i = timestamps.length - 1; i >= 0; i--) {
+    const dayKey = new Date((timestamps[i] + gmtoffset) * 1000).toISOString().slice(0, 10);
+    const close = closes[i];
+    if (dayKey !== todayKey && close != null) {
+      prevClose = close;
+      break;
+    }
+  }
 
   const dailyChangePercent =
     prevClose && prevClose !== 0 ? ((price - prevClose) / prevClose) * 100 : null;
