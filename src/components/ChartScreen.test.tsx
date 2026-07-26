@@ -175,7 +175,7 @@ describe('ChartScreen', () => {
       />
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
+    await userEvent.click(await screen.findByRole('button', { name: '+ 기록 추가' }));
     await screen.findByRole('dialog', { name: '매매 기록 추가' });
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
     await userEvent.click(screen.getByRole('button', { name: '팩트' }));

@@ -147,7 +147,7 @@ export function ChartScreen({
         }}
         className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]"
       >
-        + 매매 기록 추가
+        + 기록 추가
       </button>
 
       <TradeList trades={trades} tags={tags} onSelect={setSelected} />
