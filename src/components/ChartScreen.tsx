@@ -167,8 +167,8 @@ export function ChartScreen({
           ‹
         </button>
         <h2 className="text-center">
-          <span className="block text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">{ticker}</span>
-          <span className="block text-xs text-zinc-500 dark:text-zinc-400">{name}</span>
+          <span className="block text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">{name || ticker}</span>
+          <span className="block text-xs text-zinc-500 dark:text-zinc-400">{ticker}</span>
         </h2>
         <button
           type="button"

@@ -68,11 +68,21 @@ export async function yahooFinanceQuote(
   const result = await yahooChartFetch(ySym, { interval: '1d', range: '5d' });
   const price = result.meta.regularMarketPrice;
 
-  // 전일 종가: regularMarketPreviousClose → chartPreviousClose → previousClose 순으로 시도
-  const prevClose =
+  // 전일 종가 1순위: meta의 regularMarketPreviousClose (가장 신뢰도 높음)
+  let prevClose: number | undefined =
     result.meta.regularMarketPreviousClose ??
     result.meta.chartPreviousClose ??
     result.meta.previousClose;
+
+  // 2순위: indicators에 있는 실제 봉 데이터의 마지막 전일 종가
+  if (!prevClose) {
+    const closes = result.indicators?.quote[0]?.close ?? [];
+    // null 제거 후 마지막 2개 중 끝에서 두 번째가 전일 종가
+    const validCloses = closes.filter((c): c is number => c != null);
+    if (validCloses.length >= 2) {
+      prevClose = validCloses[validCloses.length - 2];
+    }
+  }
 
   const dailyChangePercent =
     prevClose && prevClose !== 0 ? ((price - prevClose) / prevClose) * 100 : null;
