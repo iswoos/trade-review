@@ -72,8 +72,11 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     return map;
   }, [history, period]);
 
-  function bucketDateForTrade(tradeDate: string): string | undefined {
-    return bucketDateByKey.get(bucketKey(tradeDate, period));
+  function bucketDateForTrade(tradeDate: string): string {
+    const bucket = bucketDateByKey.get(bucketKey(tradeDate, period));
+    if (bucket) return bucket;
+    // Fallback for future dates or dates outside stock history bounds
+    return tradeDate;
   }
 
   useEffect(() => {
@@ -463,45 +466,20 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         />
 
         {/* Improved Clear Date Trade Chips Lane Below Chart */}
-        <div data-testid="trade-arrow-lane" className="relative mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
+        <div data-testid="trade-arrow-lane" className="mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
           <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">기록 날짜:</span>
           {dateTradeSummary.map((item) => (
             <button
               key={item.time}
               type="button"
               onClick={() => onPointSelect(item.firstTrade)}
-              aria-label={`기록 ${item.time}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              aria-label={`${item.buy > 0 ? '매수 ' : item.sell > 0 ? '매도 ' : '메모 '}${item.time}`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             >
-              <span>{item.time.slice(5)}</span>
+              <span>{item.time.length > 7 ? item.time.slice(5) : item.time}</span>
               {item.buy > 0 && <span className="text-rose-500 font-extrabold">🔴{item.buy > 1 ? item.buy : ''}</span>}
               {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
               {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
-            </button>
-          ))}
-          {arrows.map((arrow) => (
-            <button
-              key={`${arrow.time}-${arrow.side}`}
-              type="button"
-              onClick={() => selectArrowGroup(arrow.time, arrow.side)}
-              aria-label={`${arrow.side === 'buy' ? '매수' : arrow.side === 'sell' ? '매도' : '메모'} ${arrow.time}`}
-              style={{
-                position: 'absolute',
-                left: arrow.x + arrow.offsetX,
-                transform: 'translateX(-50%)',
-                color: ARROW_COLOR[arrow.side],
-                fontSize: '0.75rem',
-                lineHeight: 1,
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                opacity: 0.1,
-              }}
-            >
-              {arrow.side === 'buy' ? '▲' : arrow.side === 'sell' ? '▼' : '📝'}
-              {arrow.count > 1 ? ` ×${arrow.count}` : ''}
             </button>
           ))}
         </div>

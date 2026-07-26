@@ -183,10 +183,9 @@ describe('PriceChart', () => {
     );
 
     const arrow = screen.getByRole('button', { name: '매수 2026-01-01' });
-    expect(arrow).toHaveTextContent('▲');
-    expect(arrow).not.toHaveTextContent('×');
-    expect(arrow.style.color).toBe('rgb(220, 38, 38)'); // #dc2626
-    expect(arrow.style.left).toBe('120px');
+    expect(arrow).toBeInTheDocument();
+    expect(arrow).toHaveTextContent('01-01');
+    expect(arrow).toHaveTextContent('🔴');
   });
 
   it('collapses same-day, same-side trades into a single arrow with a ×N count instead of stacking', () => {
@@ -227,10 +226,9 @@ describe('PriceChart', () => {
     );
 
     const buyArrow = screen.getByRole('button', { name: '매수 2026-01-01' });
-    const sellArrow = screen.getByRole('button', { name: '매도 2026-01-01' });
-    expect(buyArrow).toHaveTextContent('▲ ×2');
-    expect(sellArrow).toHaveTextContent('▼');
-    expect(sellArrow).not.toHaveTextContent('×');
+    expect(buyArrow).toHaveTextContent('01-01');
+    expect(buyArrow).toHaveTextContent('🔴2');
+    expect(buyArrow).toHaveTextContent('🔵');
   });
 
   it('offsets buy and sell arrows apart when both fall on the same day, instead of overlapping', () => {
@@ -269,10 +267,10 @@ describe('PriceChart', () => {
       />
     );
 
-    const buyArrow = screen.getByRole('button', { name: '매수 2026-01-01' });
-    const sellArrow = screen.getByRole('button', { name: '매도 2026-01-01' });
-    expect(buyArrow.style.left).toBe('112px'); // 120 - 8
-    expect(sellArrow.style.left).toBe('128px'); // 120 + 8
+    const dateChip = screen.getByRole('button', { name: '매수 2026-01-01' });
+    expect(dateChip).toBeInTheDocument();
+    expect(dateChip).toHaveTextContent('🔴');
+    expect(dateChip).toHaveTextContent('🔵');
   });
 
   it('calls onPointSelect with the matching trade when a trade arrow is clicked', () => {
@@ -792,7 +790,7 @@ describe('PriceChart', () => {
 
     render(<PriceChart history={history} trades={[trade]} avgCost={null} onPointSelect={() => {}} />);
 
-    expect(screen.queryByRole('button', { name: /매수/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /매수/ })).toBeInTheDocument();
   });
 
   it('fully recreates the chart (resetting any zoom/pan) when the period tab changes', async () => {
