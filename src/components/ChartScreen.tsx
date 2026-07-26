@@ -153,26 +153,39 @@ export function ChartScreen({
       <TradeList trades={trades} tags={tags} onSelect={setSelected} />
 
       {showAddSheet && (
-        <div className="fixed inset-0 z-20 flex items-end bg-zinc-900/40">
-          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 dark:bg-zinc-900">
-            <AddTradeSheet
-              db={db}
-              ticker={ticker}
-              name={name}
-              availableTags={tags}
-              tradeToEdit={tradeToEdit}
-              onSaved={handleTradeSaved}
-              onClose={() => {
-                setShowAddSheet(false);
-                setTradeToEdit(null);
-              }}
-            />
-          </div>
+        <div
+          className="fixed inset-0 z-20 flex items-end bg-zinc-900/50 backdrop-blur-[2px]"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddSheet(false);
+              setTradeToEdit(null);
+            }
+          }}
+        >
+          <AddTradeSheet
+            db={db}
+            ticker={ticker}
+            name={name}
+            availableTags={tags}
+            tradeToEdit={tradeToEdit}
+            onSaved={handleTradeSaved}
+            onClose={() => {
+              setShowAddSheet(false);
+              setTradeToEdit(null);
+            }}
+          />
         </div>
       )}
 
       {selected && (
-        <div className="fixed inset-0 z-20 flex items-end bg-zinc-900/40">
+        <div
+          className="fixed inset-0 z-20 flex items-end bg-zinc-900/50 backdrop-blur-[2px]"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelected(null);
+            }
+          }}
+        >
           <TradeBottomSheet
             trade={selected}
             tags={tags}
