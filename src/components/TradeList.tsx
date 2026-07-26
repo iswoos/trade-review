@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Tag, Trade } from '../types';
 
 interface TradeListProps {
@@ -100,67 +100,93 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
 
 export function TradeList({ trades, tags, onSelect }: TradeListProps) {
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell' | 'note'>('all');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  const buyCount = trades.filter((t) => t.side === 'buy').length;
-  const sellCount = trades.filter((t) => t.side === 'sell').length;
-  const noteCount = trades.filter((t) => t.side === 'note').length;
+  const sortedTrades = useMemo(() => {
+    return [...trades].sort((a, b) => {
+      const timeA = a.datetime ?? '';
+      const timeB = b.datetime ?? '';
+      const cmp = timeB.localeCompare(timeA);
+      if (cmp !== 0) {
+        return sortOrder === 'desc' ? cmp : -cmp;
+      }
+      const recA = a.recordedAt ?? '';
+      const recB = b.recordedAt ?? '';
+      return sortOrder === 'desc' ? recB.localeCompare(recA) : recA.localeCompare(recB);
+    });
+  }, [trades, sortOrder]);
 
-  const filteredTrades = trades.filter((t) => {
+  const buyCount = sortedTrades.filter((t) => t.side === 'buy').length;
+  const sellCount = sortedTrades.filter((t) => t.side === 'sell').length;
+  const noteCount = sortedTrades.filter((t) => t.side === 'note').length;
+
+  const filteredTrades = sortedTrades.filter((t) => {
     if (filter === 'all') return true;
     return t.side === filter;
   });
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Category Filter Chips Bar */}
-      <div role="radiogroup" aria-label="기록 필터" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-1 text-xs font-bold scrollbar-none">
+      {/* Header Row: Category Filter Chips & Sort Toggle */}
+      <div className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 dark:border-zinc-800">
+        <div role="radiogroup" aria-label="기록 필터" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs font-bold scrollbar-none">
+          <button
+            type="button"
+            aria-pressed={filter === 'all'}
+            onClick={() => setFilter('all')}
+            className={`rounded-xl px-3 py-1.5 transition ${
+              filter === 'all'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400'
+            }`}
+          >
+            전체 ({trades.length})
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'buy'}
+            onClick={() => setFilter('buy')}
+            className={`rounded-xl px-3 py-1.5 transition ${
+              filter === 'buy'
+                ? 'bg-buy text-white shadow-sm'
+                : 'bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400'
+            }`}
+          >
+            🔴 매수 ({buyCount})
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'sell'}
+            onClick={() => setFilter('sell')}
+            className={`rounded-xl px-3 py-1.5 transition ${
+              filter === 'sell'
+                ? 'bg-sell text-white shadow-sm'
+                : 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400'
+            }`}
+          >
+            🔵 매도 ({sellCount})
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'note'}
+            onClick={() => setFilter('note')}
+            className={`rounded-xl px-3 py-1.5 transition ${
+              filter === 'note'
+                ? 'bg-amber-600 text-white shadow-sm dark:bg-amber-500'
+                : 'bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
+            }`}
+          >
+            📝 메모 ({noteCount})
+          </button>
+        </div>
+
         <button
           type="button"
-          aria-pressed={filter === 'all'}
-          onClick={() => setFilter('all')}
-          className={`rounded-xl px-3 py-1.5 transition ${
-            filter === 'all'
-              ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400'
-          }`}
+          onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[0.68rem] font-bold text-zinc-600 shadow-sm transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          title="날짜 정렬 변경"
         >
-          전체 ({trades.length})
-        </button>
-        <button
-          type="button"
-          aria-pressed={filter === 'buy'}
-          onClick={() => setFilter('buy')}
-          className={`rounded-xl px-3 py-1.5 transition ${
-            filter === 'buy'
-              ? 'bg-buy text-white shadow-sm'
-              : 'bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400'
-          }`}
-        >
-          🔴 매수 ({buyCount})
-        </button>
-        <button
-          type="button"
-          aria-pressed={filter === 'sell'}
-          onClick={() => setFilter('sell')}
-          className={`rounded-xl px-3 py-1.5 transition ${
-            filter === 'sell'
-              ? 'bg-sell text-white shadow-sm'
-              : 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400'
-          }`}
-        >
-          🔵 매도 ({sellCount})
-        </button>
-        <button
-          type="button"
-          aria-pressed={filter === 'note'}
-          onClick={() => setFilter('note')}
-          className={`rounded-xl px-3 py-1.5 transition ${
-            filter === 'note'
-              ? 'bg-amber-600 text-white shadow-sm dark:bg-amber-500'
-              : 'bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
-          }`}
-        >
-          📝 메모 ({noteCount})
+          <span>{sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}</span>
         </button>
       </div>
 
