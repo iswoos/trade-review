@@ -56,6 +56,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   const [period, setPeriod] = useState<AggregationPeriod>('day');
   // Visible chart date range (YYYY-MM-DD strings) — updated on every scroll/zoom
   const [visibleDateRange, setVisibleDateRange] = useState<{ from: string; to: string } | null>(null);
+  // Ref for the chip scroll container — used to auto-scroll to first active chip
+  const chipScrollRef = useRef<HTMLDivElement>(null);
   const [ohlc, setOhlc] = useState<{
     date: string;
     open: number;
@@ -387,17 +389,23 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
   }, [trades, bucketDateForTrade]);
 
-  // Filter chips to current visible chart viewport
-  const visibleChips = useMemo(() => {
-    if (!visibleDateRange) return dateTradeSummary;
-    return dateTradeSummary.filter(
-      (item) => item.time >= visibleDateRange.from && item.time <= visibleDateRange.to
-    );
-  }, [dateTradeSummary, visibleDateRange]);
+  // Derive which chips are in the current viewport (for visual highlight)
+  const isChipActive = (time: string): boolean => {
+    if (!visibleDateRange) return true;
+    return time >= visibleDateRange.from && time <= visibleDateRange.to;
+  };
 
-  // Toggle: show only visible-range chips vs. all chips
-  const [showAllChips, setShowAllChips] = useState(false);
-  const displayedChips = showAllChips ? dateTradeSummary : visibleChips;
+  // Auto-scroll chip bar to first active chip when viewport changes
+  useEffect(() => {
+    const container = chipScrollRef.current;
+    if (!container || !visibleDateRange) return;
+    const firstActive = container.querySelector<HTMLElement>('[data-active="true"]');
+    if (firstActive && typeof container.scrollBy === 'function') {
+      const containerLeft = container.getBoundingClientRect().left;
+      const chipLeft = firstActive.getBoundingClientRect().left;
+      container.scrollBy({ left: chipLeft - containerLeft - 8, behavior: 'smooth' });
+    }
+  }, [visibleDateRange]);
 
   /** Human-readable chip label depending on current period */
   function chipLabel(bDate: string): string {
@@ -509,56 +517,50 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
         />
 
-        {/* Date Trade Chips Lane */}
-        <div data-testid="trade-arrow-lane" className="mt-2 flex flex-col gap-1 py-1">
-          {/* Header row: label + range toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">
-              기록 날짜
-              {!showAllChips && visibleChips.length < dateTradeSummary.length && (
-                <span className="ml-1 text-zinc-300 dark:text-zinc-600 font-normal">
-                  ({visibleChips.length}/{dateTradeSummary.length})
-                </span>
-              )}
-            </span>
-            {dateTradeSummary.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllChips((v) => !v)}
-                className={`text-[0.6rem] font-bold px-2 py-0.5 rounded-full border transition ${
-                  showAllChips
-                    ? 'bg-zinc-800 text-zinc-100 border-zinc-700 dark:bg-zinc-200 dark:text-zinc-800 dark:border-zinc-300'
-                    : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
-                }`}
-              >
-                {showAllChips ? '현재 구간만' : '전체 보기'}
-              </button>
-            )}
-          </div>
-
-          {/* Chip scroll row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none">
-            {displayedChips.length > 0 ? (
-              displayedChips.map((item) => (
-                <button
-                  key={item.time}
-                  type="button"
-                  onClick={() => onPointSelect(item.firstTrade)}
-                  aria-label={`${item.buy > 0 ? '매수 ' : item.sell > 0 ? '매도 ' : '메모 '}${item.time}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                >
-                  <span>{chipLabel(item.time)}</span>
-                  {item.buy > 0 && <span className="text-rose-500 font-extrabold">🔴{item.buy > 1 ? item.buy : ''}</span>}
-                  {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
-                  {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
-                </button>
-              ))
-            ) : (
-              <span className="text-[0.65rem] text-zinc-300 dark:text-zinc-600 italic">
-                {showAllChips ? '기록된 내역 없음' : '현재 구간에 기록된 내역 없음'}
-              </span>
-            )}
-          </div>
+        {/* Date Trade Chips Lane — all chips, active ones highlighted, inactive dimmed */}
+        <div data-testid="trade-arrow-lane" className="mt-2 py-1">
+          {dateTradeSummary.length > 0 ? (
+            <div
+              ref={chipScrollRef}
+              className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none"
+            >
+              {dateTradeSummary.map((item) => {
+                const active = isChipActive(item.time);
+                return (
+                  <button
+                    key={item.time}
+                    type="button"
+                    data-active={active}
+                    onClick={() => onPointSelect(item.firstTrade)}
+                    aria-label={`${item.buy > 0 ? '매수 ' : item.sell > 0 ? '매도 ' : '메모 '}${item.time}`}
+                    className={[
+                      'inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[0.68rem] font-bold transition-all duration-200',
+                      active
+                        ? 'border border-zinc-300 bg-white shadow-sm text-zinc-800 active:scale-95 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
+                        : 'border border-zinc-200/50 bg-zinc-50/50 text-zinc-400 opacity-40 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-500',
+                    ].join(' ')}
+                  >
+                    <span className="font-mono">{chipLabel(item.time)}</span>
+                    {item.buy > 0 && (
+                      <span className={active ? 'text-rose-500' : 'text-zinc-400'}>
+                        🔴{item.buy > 1 ? item.buy : ''}
+                      </span>
+                    )}
+                    {item.sell > 0 && (
+                      <span className={active ? 'text-blue-500' : 'text-zinc-400'}>
+                        🔵{item.sell > 1 ? item.sell : ''}
+                      </span>
+                    )}
+                    {item.note > 0 && (
+                      <span className={active ? 'text-amber-500' : 'text-zinc-400'}>
+                        📝{item.note > 1 ? item.note : ''}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
