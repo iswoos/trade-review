@@ -6,6 +6,9 @@ export interface PositionListItem {
   lastTradeAt: string;
   lastTradeRecordedAt?: string;
   currentPrice: number | null;
+  buyCnt: number;
+  sellCnt: number;
+  noteCnt: number;
 }
 
 export type SortOrder = 'recent' | 'alphabetical' | 'pnl';

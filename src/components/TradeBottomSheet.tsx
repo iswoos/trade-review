@@ -85,7 +85,7 @@ export function TradeBottomSheet({
       className="relative flex flex-col justify-between w-full h-[520px] max-h-[85vh] rounded-t-3xl border border-zinc-200/80 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
     >
       {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto scrollbar-none">
         {/* Modal Top Drag Handle Bar & Close X */}
         <div className="relative mb-3 flex items-center justify-between pt-1">
           <div className="w-8" />

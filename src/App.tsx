@@ -83,6 +83,9 @@ export function App() {
           lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
           lastTradeRecordedAt: p.lastTradeRecordedAt,
           currentPrice: prices[p.ticker] ?? null,
+          buyCnt: p.buyCnt,
+          sellCnt: p.sellCnt,
+          noteCnt: p.noteCnt,
         })),
     [positions, prices]
   );

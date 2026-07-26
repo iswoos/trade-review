@@ -177,7 +177,7 @@ export function AddTradeSheet({
         }}
         className="flex flex-col justify-between h-full"
       >
-        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
+        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3">
           {/* Top Drag Handle & Close Button */}
           <div className="relative mb-1 flex items-center justify-between pt-1">
             <div className="w-8" />

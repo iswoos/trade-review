@@ -148,6 +148,30 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                     )}
                   </div>
                 </div>
+
+                {/* 매수/매도/메모 기록 카운트 뱃지 */}
+                {(item.buyCnt > 0 || item.sellCnt > 0 || item.noteCnt > 0) && (
+                  <div className="flex items-center gap-1.5">
+                    {item.buyCnt > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[0.67rem] font-semibold text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
+                        <span aria-hidden>🔴</span>
+                        매수 {item.buyCnt}
+                      </span>
+                    )}
+                    {item.sellCnt > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[0.67rem] font-semibold text-blue-500 dark:bg-blue-950/40 dark:text-blue-400">
+                        <span aria-hidden>🔵</span>
+                        매도 {item.sellCnt}
+                      </span>
+                    )}
+                    {item.noteCnt > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[0.67rem] font-semibold text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
+                        <span aria-hidden>📝</span>
+                        메모 {item.noteCnt}
+                      </span>
+                    )}
+                  </div>
+                )}
               </button>
             </li>
           );

@@ -49,6 +49,9 @@ function item(overrides: Partial<PositionListItem> = {}): PositionListItem {
     avgCost: 11.36,
     lastTradeAt: '2025-07-10T00:00:00.000Z',
     currentPrice: 12,
+    buyCnt: 0,
+    sellCnt: 0,
+    noteCnt: 0,
     ...overrides,
   };
 }

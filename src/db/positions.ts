@@ -18,8 +18,15 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
   let state = EMPTY_POSITION_STATE;
   const avgCostHistory: { at: string; avgCost: number }[] = [];
   let lastTradeRecordedAt = '';
+  let buyCnt = 0;
+  let sellCnt = 0;
+  let noteCnt = 0;
 
   for (const trade of trades) {
+    if (trade.side === 'buy') buyCnt++;
+    else if (trade.side === 'sell') sellCnt++;
+    else if (trade.side === 'note') noteCnt++;
+
     if (trade.side === 'note') continue;
     state =
       trade.side === 'buy'
@@ -37,6 +44,9 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
     avgCostHistory,
     realizedPl: state.realizedPl,
     lastTradeRecordedAt,
+    buyCnt,
+    sellCnt,
+    noteCnt,
   };
 }
 
