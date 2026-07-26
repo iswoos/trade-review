@@ -92,9 +92,9 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                 <div className="flex items-start justify-between w-full">
                   <div className="flex flex-col">
                     <span className="text-base font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-                      {item.ticker}
+                      {item.name || item.ticker}
                     </span>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{item.name}</span>
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{item.ticker}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     {item.currentPrice != null && (
@@ -117,7 +117,9 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                         {dailyChange.toFixed(2)}%
                       </span>
                     ) : (
-                      <span className="mt-0.5 text-[0.68rem] text-zinc-400 font-medium">전일대비 -</span>
+                      <span className="mt-0.5 rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+                        전일대비 -
+                      </span>
                     )}
                   </div>
                 </div>
@@ -163,7 +165,7 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                                   : 'text-[0.68rem] font-bold text-zinc-500 dark:text-zinc-400 font-mono'
                               }
                             >
-                              ({pnlPercent > 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+                              ({pnlPercent > 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
                             </span>
                           )}
                         </div>
@@ -192,17 +194,19 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
                     <div className="flex flex-col items-end">
                       <span className="text-zinc-400 dark:text-zinc-500">평가금액</span>
                       {totalEvaluation != null ? (
-                        <span
-                          className={
-                            isLoss
-                              ? 'font-bold text-blue-600 dark:text-blue-400 font-mono'
-                              : isProfit
-                              ? 'font-bold text-rose-600 dark:text-rose-400 font-mono'
-                              : 'font-bold text-zinc-700 dark:text-zinc-300 font-mono'
-                          }
-                        >
-                          {totalEvaluation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                          <span className="text-[0.65rem] font-normal opacity-60"> 원</span>
+                        <span className="font-bold font-mono">
+                          <span
+                            className={
+                              isLoss
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : isProfit
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-zinc-700 dark:text-zinc-300'
+                            }
+                          >
+                            {totalEvaluation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[0.65rem] font-normal text-zinc-400 dark:text-zinc-500"> 원</span>
                         </span>
                       ) : (
                         <span className="text-zinc-400 font-mono">-</span>
