@@ -1,6 +1,6 @@
 // src/api/quotes.test.ts
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { searchSymbols, fetchQuote, fetchHistory } from './quotes';
+import { searchSymbols, fetchQuote, fetchHistory, fetchFxRate } from './quotes';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -110,5 +110,25 @@ describe('fetchHistory caching', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+  });
+});
+
+describe('fetchFxRate', () => {
+  it('returns the parsed rate on success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ rate: 1352.5 }) }));
+    const result = await fetchFxRate('2026-07-18');
+    expect(result).toBe(1352.5);
+  });
+
+  it('falls back to null on network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    const result = await fetchFxRate('2026-07-18');
+    expect(result).toBeNull();
+  });
+
+  it('falls back to null on a non-ok response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502 }));
+    const result = await fetchFxRate('2026-07-18');
+    expect(result).toBeNull();
   });
 });

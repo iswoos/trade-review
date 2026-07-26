@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from './db/schema';
-import { listActiveTags } from './db/tags';
+import { listActiveTags, seedDefaultTags } from './db/tags';
 import { listPositions } from './db/positions';
 import { requestPersistentStorage } from './lib/persistStorage';
 import { fetchQuote } from './api/quotes';
 import { HomeScreen } from './components/HomeScreen';
 import { ChartScreen } from './components/ChartScreen';
+import { TagManagementScreen } from './components/TagManagementScreen';
 import type { Position, Tag } from './types';
 import { type PositionListItem, type SortOrder } from './lib/positionNav';
 
@@ -16,7 +17,7 @@ export function App() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
-  const [screen, setScreen] = useState<'home' | 'chart'>('home');
+  const [screen, setScreen] = useState<'home' | 'chart' | 'tags'>('home');
   const [activeTicker, setActiveTicker] = useState<string | null>(null);
   const [activeName, setActiveName] = useState('');
 
@@ -33,6 +34,7 @@ export function App() {
     requestPersistentStorage();
     openTradeReviewDB().then(async (opened) => {
       setDb(opened);
+      await seedDefaultTags(opened);
       setTags(await listActiveTags(opened));
       await reloadPositions(opened);
     });
@@ -48,9 +50,17 @@ export function App() {
   useEffect(() => {
     window.history.replaceState({ screen: 'home' }, '');
     function handlePopState(event: PopStateEvent) {
-      const state = event.state as { screen: 'home' } | { screen: 'chart'; ticker: string; name: string } | null;
+      const state = event.state as
+        | { screen: 'home' }
+        | { screen: 'chart'; ticker: string; name: string }
+        | { screen: 'tags' }
+        | null;
       if (!state || state.screen === 'home') {
         setScreen('home');
+        return;
+      }
+      if (state.screen === 'tags') {
+        setScreen('tags');
         return;
       }
       setActiveTicker(state.ticker);
@@ -91,6 +101,16 @@ export function App() {
     if (db) await reloadPositions(db);
   }
 
+  function handleOpenTagManagement() {
+    window.history.pushState({ screen: 'tags' }, '');
+    setScreen('tags');
+  }
+
+  async function handleCloseTagManagement() {
+    if (db) setTags(await listActiveTags(db));
+    window.history.back();
+  }
+
   if (!db) return <p>불러오는 중...</p>;
 
   return (
@@ -101,6 +121,7 @@ export function App() {
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
           onSelectTicker={handleSelectTicker}
+          onOpenTagManagement={handleOpenTagManagement}
         />
       )}
       {screen === 'chart' && activeTicker && (
@@ -114,6 +135,9 @@ export function App() {
           onSelectTicker={handleSelectTicker}
           onTradeSaved={handleTradeSaved}
         />
+      )}
+      {screen === 'tags' && (
+        <TagManagementScreen db={db} onBack={handleCloseTagManagement} />
       )}
     </main>
   );

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { twelveDataQuote, twelveDataHistory, twelveDataSearch } from './twelveData';
+import { twelveDataQuote, twelveDataHistory, twelveDataSearch, twelveDataFxRate } from './twelveData';
 
 beforeEach(() => {
   process.env.TWELVE_DATA_API_KEY = 'test-key';
@@ -104,5 +104,43 @@ describe('twelveDataSearch', () => {
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain('/symbol_search?');
     expect(url).toContain('symbol=apple');
+  });
+});
+
+describe('twelveDataFxRate', () => {
+  it('returns the closing USD/KRW rate nearest to (on or before) the given date', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          values: [
+            { datetime: '2026-07-18', open: '1350', high: '1360', low: '1345', close: '1352.5' },
+            { datetime: '2026-07-17', open: '1348', high: '1355', low: '1340', close: '1350.0' },
+          ],
+        }),
+      })
+    );
+    const rate = await twelveDataFxRate('2026-07-18');
+    expect(rate).toBe(1352.5);
+  });
+
+  it('requests a 7-day lookback window ending on the given date, for USD/KRW', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: [{ datetime: '2026-07-18', open: '1350', high: '1360', low: '1345', close: '1352.5' }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await twelveDataFxRate('2026-07-18');
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.pathname).toContain('/time_series');
+    expect(url.searchParams.get('symbol')).toBe('USD/KRW');
+    expect(url.searchParams.get('start_date')).toBe('2026-07-11');
+    expect(url.searchParams.get('end_date')).toBe('2026-07-18');
+  });
+
+  it('throws when no rate is available in the lookback window', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ values: [] }) }));
+    await expect(twelveDataFxRate('2026-07-18')).rejects.toThrow();
   });
 });

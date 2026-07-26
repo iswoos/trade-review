@@ -7,6 +7,7 @@ interface HomeScreenProps {
   sortOrder: SortOrder;
   onSortOrderChange: (order: SortOrder) => void;
   onSelectTicker: (ticker: string, name: string) => void;
+  onOpenTagManagement: () => void;
 }
 
 const SORT_LABELS: Record<SortOrder, string> = {
@@ -15,7 +16,7 @@ const SORT_LABELS: Record<SortOrder, string> = {
   pnl: '평가손익순',
 };
 
-export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTicker }: HomeScreenProps) {
+export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTicker, onOpenTagManagement }: HomeScreenProps) {
   const sorted = sortPositionItems(positions, sortOrder);
 
   return (
@@ -24,6 +25,14 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
         <div className="flex-1">
           <TickerSearch positions={positions} onSelectTicker={onSelectTicker} />
         </div>
+        <button
+          type="button"
+          onClick={onOpenTagManagement}
+          aria-label="태그 관리"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
+        >
+          🏷️
+        </button>
         <ThemeToggle />
       </div>
 

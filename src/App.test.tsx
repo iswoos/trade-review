@@ -93,7 +93,8 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '+ 매매 기록 추가' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => expect(hasAvgCostLine()).toBe(true));
   });
@@ -107,14 +108,16 @@ describe('App', () => {
     // buy 10 shares
     await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument());
 
     // sell all 10 shares to close the position
     await userEvent.click(screen.getByRole('button', { name: '+ 매매 기록 추가' }));
     await userEvent.click(screen.getByRole('button', { name: '매도' }));
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(await screen.findByRole('button', { name: '잘 모르겠음' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '매매 기록 추가' })).not.toBeInTheDocument());
 
     // search again on the (still-mounted) chart screen's search bar - JOBY should no longer
@@ -163,5 +166,31 @@ describe('App', () => {
     window.history.back();
 
     await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+  });
+
+  it('navigates to the tag management screen and back via the home button', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: '태그 관리' }));
+    expect(await screen.findByRole('list', { name: '태그 목록' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '홈' }));
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+  });
+
+  it('a tag created in tag management is available for selection in a newly opened trade form', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: '태그 관리' }));
+    await userEvent.type(await screen.findByLabelText('새 태그 이름'), '장기투자');
+    await userEvent.click(screen.getByRole('button', { name: '+ 새 태그' }));
+    await screen.findByText('장기투자');
+
+    await userEvent.click(screen.getByRole('button', { name: '홈' }));
+    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
+    await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
+    await userEvent.click(await screen.findByRole('button', { name: '+ 매매 기록 추가' }));
+
+    expect(await screen.findByRole('button', { name: '장기투자' })).toBeInTheDocument();
   });
 });

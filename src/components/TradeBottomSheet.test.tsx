@@ -20,7 +20,7 @@ describe('TradeBottomSheet', () => {
   });
 
   it('shows the tag names when the trade has rationale tags', () => {
-    const tags = [{ id: 't1', name: '물타기', archived: false }];
+    const tags = [{ id: 't1', name: '물타기', archived: false, createdAt: new Date().toISOString(), order: 0 }];
     render(
       <TradeBottomSheet trade={{ ...baseTrade, rationaleTagIds: ['t1'] }} tags={tags} onClose={() => {}} />
     );

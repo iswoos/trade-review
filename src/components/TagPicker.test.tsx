@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { TagPicker } from './TagPicker';
 
 const tags = [
-  { id: '1', name: '팩트', archived: false },
-  { id: '2', name: '감', archived: false },
+  { id: '1', name: '팩트', archived: false, createdAt: new Date().toISOString(), order: 0 },
+  { id: '2', name: '감', archived: false, createdAt: new Date().toISOString(), order: 1 },
 ];
 
 describe('TagPicker', () => {

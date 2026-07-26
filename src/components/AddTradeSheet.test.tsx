@@ -12,6 +12,7 @@ vi.mock('../api/quotes');
 let db: IDBPDatabase<TradeReviewDB>;
 
 beforeEach(async () => {
+  vi.clearAllMocks();
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase('trade-review');
     req.onsuccess = () => resolve();
@@ -20,6 +21,7 @@ beforeEach(async () => {
   });
   db = await openTradeReviewDB();
   vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
+  vi.mocked(quotes.fetchFxRate).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -40,40 +42,35 @@ describe('AddTradeSheet', () => {
     await screen.findByDisplayValue('11.36');
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
     await userEvent.click(screen.getByRole('button', { name: '팩트' }));
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const saved = onSaved.mock.calls[0][0];
     expect(saved.ticker).toBe('JOBY');
     expect(saved.quantity).toBe(100);
     expect(saved.rationaleTagIds).toEqual([tag.id]);
+    expect(saved.datetimeUnknown).toBe(false);
   });
 
-  it('allows saving with no tag, no conviction, and no memo (wellbeing: nothing is required)', async () => {
-    const onSaved = vi.fn();
-    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={onSaved} onClose={vi.fn()} />);
+  it('disables save until date, price, quantity, and at least one tag are all filled in', async () => {
+    const tag = await createTag(db, '팩트');
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={vi.fn()} onClose={vi.fn()} />);
 
     await screen.findByDisplayValue('11.36');
+    const dateInput = screen.getByLabelText('체결 날짜') as HTMLInputElement;
+    const saveButton = screen.getByRole('button', { name: '저장' });
+
+    // Date defaults to today and price is prefilled, but quantity and tag are still empty.
+    expect(saveButton).toBeDisabled();
+
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    expect(saveButton).toBeDisabled(); // quantity filled, still no tag
 
-    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
-    expect(onSaved.mock.calls[0][0].rationaleTagIds).toEqual([]);
-  });
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    expect(saveButton).not.toBeDisabled(); // all required fields present, time left blank
 
-  it('saves datetime as null and datetimeUnknown as true when "시간 모름/예약매매" is toggled on', async () => {
-    const onSaved = vi.fn();
-    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={onSaved} onClose={vi.fn()} />);
-
-    await screen.findByDisplayValue('11.36');
-    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '시간 모름 / 예약매매' }));
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
-
-    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
-    const saved = onSaved.mock.calls[0][0];
-    expect(saved.datetime).toBeNull();
-    expect(saved.datetimeUnknown).toBe(true);
+    await userEvent.clear(dateInput);
+    expect(saveButton).toBeDisabled(); // date cleared
   });
 
   it('calls onClose when the close button is clicked', async () => {
@@ -85,8 +82,9 @@ describe('AddTradeSheet', () => {
   });
 
   it('combines date and time into the saved datetime when a time is provided', async () => {
+    const tag = await createTag(db, '팩트');
     const onSaved = vi.fn();
-    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={onSaved} onClose={vi.fn()} />);
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={onSaved} onClose={vi.fn()} />);
 
     await screen.findByDisplayValue('11.36');
     const dateInput = screen.getByLabelText('체결 날짜');
@@ -94,7 +92,8 @@ describe('AddTradeSheet', () => {
     await userEvent.type(dateInput, '2025-07-10');
     await userEvent.type(screen.getByLabelText('체결 시각'), '09:30');
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const saved = onSaved.mock.calls[0][0];
@@ -102,30 +101,92 @@ describe('AddTradeSheet', () => {
   });
 
   it('saves date-only (midnight) when the time field is left blank', async () => {
+    const tag = await createTag(db, '팩트');
     const onSaved = vi.fn();
-    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={onSaved} onClose={vi.fn()} />);
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={onSaved} onClose={vi.fn()} />);
 
     await screen.findByDisplayValue('11.36');
     const dateInput = screen.getByLabelText('체결 날짜') as HTMLInputElement;
     await userEvent.type(screen.getByLabelText('수량 또는 금액'), '10');
-    await userEvent.click(screen.getByRole('button', { name: '저장 · 평단 자동계산' }));
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     const saved = onSaved.mock.calls[0][0];
     expect(saved.datetime).toBe(new Date(dateInput.value).toISOString());
   });
 
-  it('clears the date and time fields (not just disables them) when "시간 모름/예약매매" is toggled on', async () => {
+  it('shows a visible "매수/매도 이유" heading above the tag picker', async () => {
     render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.getByText('매수/매도 이유')).toBeInTheDocument();
+  });
+
+  it('shows USD currency-aware price/quantity labels for a USD-quoted ticker (default)', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.getByLabelText('체결가 ($)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '수량(주)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '금액($)' })).toBeInTheDocument();
+  });
+
+  it('shows KRW currency-aware price/quantity labels for a KRW-quoted ticker', async () => {
+    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 71000, currency: 'KRW' });
+    render(<AddTradeSheet db={db} ticker="005930" name="삼성전자" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('71000');
+    expect(screen.getByLabelText('체결가 (원)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '금액(원)' })).toBeInTheDocument();
+  });
+
+  it('does not render a conviction star rating', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('11.36');
+    expect(screen.queryByRole('radiogroup', { name: '확신도' })).not.toBeInTheDocument();
+  });
+
+  it('auto-fetches and displays the FX rate when switching to amount mode for a USD-quoted ticker, and saves it', async () => {
+    vi.mocked(quotes.fetchFxRate).mockResolvedValue(1352.5);
+    const tag = await createTag(db, '팩트');
+    const onSaved = vi.fn();
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={onSaved} onClose={vi.fn()} />);
 
     await screen.findByDisplayValue('11.36');
-    const dateInput = screen.getByLabelText('체결 날짜') as HTMLInputElement;
-    const timeInput = screen.getByLabelText('체결 시각') as HTMLInputElement;
-    await userEvent.type(timeInput, '09:30');
+    await userEvent.click(screen.getByRole('button', { name: '금액($)' }));
+    await screen.findByText('체결 시점 환율: 1352.5');
 
-    await userEvent.click(screen.getByRole('button', { name: '시간 모름 / 예약매매' }));
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
-    expect(dateInput.value).toBe('');
-    expect(timeInput.value).toBe('');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    expect(onSaved.mock.calls[0][0].fxRateAtTrade).toBe(1352.5);
+  });
+
+  it('shows a retry message and keeps save disabled when the FX rate fetch fails, and recovers on retry', async () => {
+    vi.mocked(quotes.fetchFxRate).mockResolvedValue(null);
+    const tag = await createTag(db, '팩트');
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={vi.fn()} onClose={vi.fn()} />);
+
+    await screen.findByDisplayValue('11.36');
+    await userEvent.click(screen.getByRole('button', { name: '금액($)' }));
+    await screen.findByText('환율 조회 실패');
+
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
+    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+
+    vi.mocked(quotes.fetchFxRate).mockResolvedValue(1350);
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+    await screen.findByText('체결 시점 환율: 1350');
+    expect(screen.getByRole('button', { name: '저장' })).not.toBeDisabled();
+  });
+
+  it('does not show any FX rate UI for a KRW trade, even in amount mode', async () => {
+    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 71000, currency: 'KRW' });
+    render(<AddTradeSheet db={db} ticker="005930" name="삼성전자" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByDisplayValue('71000');
+    await userEvent.click(screen.getByRole('button', { name: '금액(원)' }));
+    expect(screen.queryByText('환율 조회 실패')).not.toBeInTheDocument();
+    expect(quotes.fetchFxRate).not.toHaveBeenCalled();
   });
 });

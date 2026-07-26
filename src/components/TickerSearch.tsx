@@ -8,6 +8,11 @@ interface TickerSearchProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 500;
+const HANGUL_PATTERN = /[ㄱ-ㆎ가-힣]/;
+
+function isHangulQuery(text: string): boolean {
+  return HANGUL_PATTERN.test(text);
+}
 
 export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
   const [query, setQuery] = useState('');
@@ -32,6 +37,10 @@ export function TickerSearch({ positions, onSelectTicker }: TickerSearchProps) {
     }
     if (!next.trim()) {
       setApiResults([]);
+      return;
+    }
+    if (isHangulQuery(next)) {
+      void runSearch(next);
       return;
     }
     debounceTimerRef.current = setTimeout(() => {

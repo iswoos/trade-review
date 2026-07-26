@@ -71,3 +71,14 @@ export async function fetchHistory(symbol: string): Promise<HistoryBar[]> {
     return [];
   }
 }
+
+export async function fetchFxRate(date: string): Promise<number | null> {
+  try {
+    const res = await fetch(`/api/fxrate?date=${encodeURIComponent(date)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { rate: number };
+    return data.rate;
+  } catch {
+    return null;
+  }
+}
