@@ -77,7 +77,7 @@ export function App() {
   const positionItems: PositionListItem[] = useMemo(
     () =>
       positions
-        .filter((p) => p.totalQuantity !== 0)
+        .filter((p) => p.totalQuantity !== 0 || p.noteCnt > 0)
         .map((p) => ({
           ticker: p.ticker,
           name: p.name,
