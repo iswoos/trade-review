@@ -40,7 +40,7 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
   const currencySymbol = trade.currency === 'KRW' ? '원' : '$';
 
   const lineCount = trade.memo ? trade.memo.split('\n').length : 0;
-  const isOverflowing = (trade.memo && trade.memo.length > 50) || lineCount > 3;
+  const isOverflowing = (trade.memo && trade.memo.length > 100) || lineCount > 3;
 
   return (
     <li className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">

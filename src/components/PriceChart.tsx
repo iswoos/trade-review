@@ -49,6 +49,30 @@ function themeOptions(isDark: boolean) {
       };
 }
 
+const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
+export function formatDateWithDay(time: any): string {
+  if (!time) return '';
+  let year: number, month: number, day: number;
+  if (typeof time === 'string') {
+    const parts = time.split('-').map(Number);
+    if (parts.length < 3) return time;
+    [year, month, day] = parts;
+  } else if (typeof time === 'object' && time !== null) {
+    year = time.year;
+    month = time.month;
+    day = time.day;
+  } else {
+    return String(time);
+  }
+  if (!year || !month || !day) return String(time);
+  const dateObj = new Date(year, month - 1, day);
+  const dayName = WEEKDAYS_KO[dateObj.getDay()];
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}.${mm}.${dd}(${dayName})`;
+}
+
 export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
@@ -93,6 +117,14 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       width: container.clientWidth,
       height: 300,
       handleScroll: { horzTouchDrag: true },
+      localization: {
+        locale: 'ko-KR',
+        dateFormat: 'yyyy.MM.dd',
+        timeFormatter: (time: any) => formatDateWithDay(time),
+      },
+      timeScale: {
+        tickMarkFormatter: (time: any) => formatDateWithDay(time),
+      },
       ...themeOptions(isDarkMode()),
     });
 
@@ -472,17 +504,17 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       {ohlc && (
         <div className="mb-2 flex flex-col gap-1.5 rounded-xl bg-zinc-100/90 p-2.5 text-[0.7rem] font-semibold text-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
           <div className="flex items-center justify-between border-b border-zinc-200/60 pb-1.5 dark:border-zinc-700/60">
-            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">{ohlc.date}</span>
+            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">{formatDateWithDay(ohlc.date)}</span>
             <span className={ohlc.changePercent >= 0 ? 'font-mono font-bold text-rose-500' : 'font-mono font-bold text-blue-500'}>
               {ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.68rem]">
-            <span>시 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.open.toLocaleString()}</span></span>
-            <span>고 <span className="font-bold text-rose-500">{ohlc.high.toLocaleString()}</span></span>
-            <span>저 <span className="font-bold text-blue-500">{ohlc.low.toLocaleString()}</span></span>
-            <span>종 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.close.toLocaleString()}</span></span>
+            <span>시가 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.open.toLocaleString()}</span></span>
+            <span>고가 <span className="font-bold text-rose-500">{ohlc.high.toLocaleString()}</span></span>
+            <span>저가 <span className="font-bold text-blue-500">{ohlc.low.toLocaleString()}</span></span>
+            <span>종가 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.close.toLocaleString()}</span></span>
           </div>
 
           {hoveredTrades.length > 0 && (

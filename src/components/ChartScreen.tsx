@@ -40,6 +40,49 @@ export function ChartScreen({
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
   const activeTickerRef = useRef(ticker);
+  const modalPushedRef = useRef(false);
+
+  function closeModal(skipHistoryBack = false) {
+    if (modalPushedRef.current) {
+      modalPushedRef.current = false;
+      if (!skipHistoryBack) {
+        window.history.back();
+      }
+    }
+    setShowAddSheet(false);
+    setTradeToEdit(null);
+    setSelected(null);
+  }
+
+  function openAddSheet(trade: Trade | null = null) {
+    setTradeToEdit(trade);
+    setShowAddSheet(true);
+    if (!modalPushedRef.current) {
+      modalPushedRef.current = true;
+      window.history.pushState({ screen: 'chart', ticker, name, modalOpen: true }, '');
+    }
+  }
+
+  function openDetailSheet(trade: Trade) {
+    setSelected(trade);
+    if (!modalPushedRef.current) {
+      modalPushedRef.current = true;
+      window.history.pushState({ screen: 'chart', ticker, name, modalOpen: true }, '');
+    }
+  }
+
+  useEffect(() => {
+    function handlePopState() {
+      if (modalPushedRef.current) {
+        modalPushedRef.current = false;
+        setShowAddSheet(false);
+        setTradeToEdit(null);
+        setSelected(null);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   async function reload() {
     const requestedTicker = ticker;
@@ -54,6 +97,9 @@ export function ChartScreen({
 
   useEffect(() => {
     activeTickerRef.current = ticker;
+    if (modalPushedRef.current) {
+      modalPushedRef.current = false;
+    }
     setShowAddSheet(false);
     setTradeToEdit(null);
     setSelected(null);
@@ -72,8 +118,7 @@ export function ChartScreen({
 
   async function handleTradeSaved() {
     await reload();
-    setShowAddSheet(false);
-    setTradeToEdit(null);
+    closeModal();
     onTradeSaved();
   }
 
@@ -84,9 +129,10 @@ export function ChartScreen({
   }
 
   async function handleDeleteTrade(trade: Trade) {
-    setSelected(null);
     await deleteTrade(db, trade.id);
-    await handleTradeSaved();
+    await reload();
+    closeModal();
+    onTradeSaved();
   }
 
   const selectedDate = selected?.datetime ? selected.datetime.slice(0, 10) : null;
@@ -136,29 +182,25 @@ export function ChartScreen({
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm shadow-zinc-900/5 dark:border-zinc-800 dark:bg-zinc-900">
-        <PriceChart history={history} trades={trades} avgCost={avgCost} onPointSelect={setSelected} />
+        <PriceChart history={history} trades={trades} avgCost={avgCost} onPointSelect={openDetailSheet} />
       </div>
 
       <button
         type="button"
-        onClick={() => {
-          setTradeToEdit(null);
-          setShowAddSheet(true);
-        }}
+        onClick={() => openAddSheet(null)}
         className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]"
       >
         + 기록 추가
       </button>
 
-      <TradeList trades={trades} tags={tags} onSelect={setSelected} />
+      <TradeList trades={trades} tags={tags} onSelect={openDetailSheet} />
 
       {showAddSheet && (
         <div
           className="fixed inset-0 z-20 flex items-end bg-zinc-900/50 backdrop-blur-[2px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setShowAddSheet(false);
-              setTradeToEdit(null);
+              closeModal();
             }
           }}
         >
@@ -169,10 +211,7 @@ export function ChartScreen({
             availableTags={tags}
             tradeToEdit={tradeToEdit}
             onSaved={handleTradeSaved}
-            onClose={() => {
-              setShowAddSheet(false);
-              setTradeToEdit(null);
-            }}
+            onClose={() => closeModal()}
           />
         </div>
       )}
@@ -182,7 +221,7 @@ export function ChartScreen({
           className="fixed inset-0 z-20 flex items-end bg-zinc-900/50 backdrop-blur-[2px]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelected(null);
+              closeModal();
             }
           }}
         >
@@ -190,7 +229,7 @@ export function ChartScreen({
             trade={selected}
             tags={tags}
             tradesOnSameDate={tradesOnSameDate}
-            onClose={() => setSelected(null)}
+            onClose={() => closeModal()}
             onEdit={handleEditTrade}
             onDelete={handleDeleteTrade}
           />
