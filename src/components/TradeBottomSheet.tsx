@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Tag, Trade } from '../types';
 
 interface TradeBottomSheetProps {
@@ -21,6 +21,14 @@ export function TradeBottomSheet({
   const [activeTrade, setActiveTrade] = useState<Trade>(initialTrade);
   const [translateY, setTranslateY] = useState(0);
   const touchStartY = useRef<number | null>(null);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   const availableTrades = tradesOnSameDate.length > 0 ? tradesOnSameDate : [initialTrade];
 
