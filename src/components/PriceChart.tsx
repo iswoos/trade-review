@@ -342,13 +342,29 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     if (match) onPointSelect(match);
   }
 
-  // Find trade/memo matching current hovered date
-  const hoveredTrade = useMemo(() => {
-    if (!ohlc?.date) return null;
-    return trades.find(
+  // Find all trades/memos matching current hovered date
+  const hoveredTrades = useMemo(() => {
+    if (!ohlc?.date) return [];
+    return trades.filter(
       (t) => t.datetime != null && bucketDateForTrade(t.datetime.slice(0, 10)) === ohlc.date
     );
   }, [ohlc?.date, trades, bucketDateForTrade]);
+
+  // Group all trades by date for lower action chips
+  const dateTradeSummary = useMemo(() => {
+    const map = new Map<string, { time: string; buy: number; sell: number; note: number; firstTrade: Trade }>();
+    for (const t of trades) {
+      if (!t.datetime) continue;
+      const bDate = bucketDateForTrade(t.datetime.slice(0, 10));
+      if (!bDate) continue;
+      const existing = map.get(bDate) ?? { time: bDate, buy: 0, sell: 0, note: 0, firstTrade: t };
+      if (t.side === 'buy') existing.buy += 1;
+      else if (t.side === 'sell') existing.sell += 1;
+      else existing.note += 1;
+      map.set(bDate, existing);
+    }
+    return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
+  }, [trades, bucketDateForTrade]);
 
   return (
     <div>
@@ -370,7 +386,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         ))}
       </div>
 
-      {/* Horizontal Slim Indicator Legend Bar (Outside Chart Canvas, zero obstruction) */}
+      {/* Horizontal Slim Indicator Legend Bar */}
       <div
         data-testid="ma-legend"
         className="mb-1.5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 px-1.5 text-[0.68rem] text-zinc-600 dark:text-zinc-300 scrollbar-none"
@@ -386,47 +402,54 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         ))}
       </div>
 
-      {/* Crosshair OHLCV & Trade/Memo Tooltip Bar */}
+      {/* Crosshair OHLCV & Multi Trade/Memo Tooltip Bar */}
       {ohlc && (
-        <div className="mb-2 flex flex-col gap-1 rounded-xl bg-zinc-100/90 p-2 text-[0.68rem] font-semibold text-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.date}</span>
-            <span>시 <span className="font-mono">{ohlc.open.toLocaleString()}</span></span>
-            <span>고 <span className="font-mono text-rose-500">{ohlc.high.toLocaleString()}</span></span>
-            <span>저 <span className="font-mono text-blue-500">{ohlc.low.toLocaleString()}</span></span>
-            <span>종 <span className="font-mono font-bold">{ohlc.close.toLocaleString()}</span></span>
-            <span className={ohlc.changePercent >= 0 ? 'font-mono text-rose-500' : 'font-mono text-blue-500'}>
-              ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+        <div className="mb-2 flex flex-col gap-1.5 rounded-xl bg-zinc-100/90 p-2.5 text-[0.7rem] font-semibold text-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
+          <div className="flex items-center justify-between border-b border-zinc-200/60 pb-1.5 dark:border-zinc-700/60">
+            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">{ohlc.date}</span>
+            <span className={ohlc.changePercent >= 0 ? 'font-mono font-bold text-rose-500' : 'font-mono font-bold text-blue-500'}>
+              {ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%
             </span>
           </div>
 
-          {hoveredTrade && (
-            <div className="flex items-center gap-2 border-t border-zinc-200/60 pt-1 dark:border-zinc-700/60">
-              <span
-                className={`rounded-md px-1.5 py-0.5 text-[0.65rem] font-black text-white ${
-                  hoveredTrade.side === 'note'
-                    ? 'bg-amber-600'
-                    : hoveredTrade.side === 'buy'
-                    ? 'bg-buy'
-                    : 'bg-sell'
-                }`}
-              >
-                {hoveredTrade.side === 'note'
-                  ? '📝 메모'
-                  : hoveredTrade.side === 'buy'
-                  ? '🔴 매수'
-                  : '🔵 매도'}
-              </span>
-              {hoveredTrade.side !== 'note' && (
-                <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                  {hoveredTrade.quantity}주 ({hoveredTrade.price.toLocaleString()}원)
-                </span>
-              )}
-              {hoveredTrade.memo && (
-                <span className="truncate italic text-zinc-500 dark:text-zinc-400">
-                  "{hoveredTrade.memo}"
-                </span>
-              )}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.68rem]">
+            <span>시 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.open.toLocaleString()}</span></span>
+            <span>고 <span className="font-bold text-rose-500">{ohlc.high.toLocaleString()}</span></span>
+            <span>저 <span className="font-bold text-blue-500">{ohlc.low.toLocaleString()}</span></span>
+            <span>종 <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.close.toLocaleString()}</span></span>
+          </div>
+
+          {hoveredTrades.length > 0 && (
+            <div className="flex flex-col gap-1 border-t border-zinc-200/60 pt-1.5 dark:border-zinc-700/60">
+              <span className="text-[0.63rem] font-bold text-zinc-400 dark:text-zinc-500">기록 목록 (클릭시 상세보기)</span>
+              <div className="flex flex-wrap gap-1.5">
+                {hoveredTrades.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onPointSelect(t)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200/80 bg-white px-2 py-1 text-[0.68rem] font-bold shadow-sm transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900"
+                  >
+                    <span
+                      className={`rounded px-1 py-0.2 text-[0.6rem] font-black text-white ${
+                        t.side === 'note' ? 'bg-amber-600' : t.side === 'buy' ? 'bg-buy' : 'bg-sell'
+                      }`}
+                    >
+                      {t.side === 'note' ? '📝 메모' : t.side === 'buy' ? '🔴 매수' : '🔵 매도'}
+                    </span>
+                    {t.side !== 'note' && (
+                      <span className="font-mono text-zinc-900 dark:text-zinc-100">
+                        {t.quantity}주 ({t.price.toLocaleString()}원)
+                      </span>
+                    )}
+                    {t.memo && (
+                      <span className="max-w-[100px] truncate italic text-zinc-500 dark:text-zinc-400">
+                        "{t.memo}"
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -438,7 +461,24 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           data-testid="price-chart"
           style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
         />
-        <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
+
+        {/* Improved Clear Date Trade Chips Lane Below Chart */}
+        <div data-testid="trade-arrow-lane" className="relative mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
+          <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">기록 날짜:</span>
+          {dateTradeSummary.map((item) => (
+            <button
+              key={item.time}
+              type="button"
+              onClick={() => onPointSelect(item.firstTrade)}
+              aria-label={`기록 ${item.time}`}
+              className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              <span>{item.time.slice(5)}</span>
+              {item.buy > 0 && <span className="text-rose-500 font-extrabold">🔴{item.buy > 1 ? item.buy : ''}</span>}
+              {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
+              {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
+            </button>
+          ))}
           {arrows.map((arrow) => (
             <button
               key={`${arrow.time}-${arrow.side}`}
@@ -457,6 +497,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
                 padding: 0,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
+                opacity: 0.1,
               }}
             >
               {arrow.side === 'buy' ? '▲' : arrow.side === 'sell' ? '▼' : '📝'}
