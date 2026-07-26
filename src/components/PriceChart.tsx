@@ -101,6 +101,56 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       aggregated.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
     );
 
+    // Render candle markers for trade/note events
+    const markers: {
+      time: string;
+      position: 'belowBar' | 'aboveBar';
+      color: string;
+      shape: 'arrowUp' | 'arrowDown' | 'square';
+      text: string;
+    }[] = [];
+
+    const dateTradeMap = new Map<string, Trade[]>();
+    for (const t of trades) {
+      if (!t.datetime) continue;
+      const bDate = bucketDateForTrade(t.datetime.slice(0, 10));
+      if (!bDate) continue;
+      const list = dateTradeMap.get(bDate) ?? [];
+      list.push(t);
+      dateTradeMap.set(bDate, list);
+    }
+
+    for (const [bDate, list] of dateTradeMap) {
+      for (const t of list) {
+        if (t.side === 'buy') {
+          markers.push({
+            time: bDate,
+            position: 'belowBar',
+            color: '#dc2626',
+            shape: 'arrowUp',
+            text: `매수 ${t.quantity}주`,
+          });
+        } else if (t.side === 'sell') {
+          markers.push({
+            time: bDate,
+            position: 'aboveBar',
+            color: '#2563eb',
+            shape: 'arrowDown',
+            text: `매도 ${t.quantity}주`,
+          });
+        } else {
+          markers.push({
+            time: bDate,
+            position: 'aboveBar',
+            color: '#d97706',
+            shape: 'square',
+            text: `📝 ${t.memo ? t.memo.slice(0, 6) : '메모'}`,
+          });
+        }
+      }
+    }
+    (candleSeries as any).setMarkers?.(markers);
+
     chart.subscribeCrosshairMove?.((param) => {
       if (!param.time || !param.seriesData) {
         setOhlc(null);
@@ -119,6 +169,17 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         });
       } else {
         setOhlc(null);
+      }
+    });
+
+    chart.subscribeClick?.((param) => {
+      if (!param.time) return;
+      const dateStr = String(param.time);
+      const match = trades.find(
+        (t) => t.datetime != null && bucketDateForTrade(t.datetime.slice(0, 10)) === dateStr
+      );
+      if (match) {
+        onPointSelect(match);
       }
     });
 
@@ -314,12 +375,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         data-testid="ma-legend"
         className="mb-1.5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 px-1.5 text-[0.68rem] text-zinc-600 dark:text-zinc-300 scrollbar-none"
       >
-        {avgCost != null && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 font-bold text-orange-600 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/30">
-            <span className="inline-block border-b-2 border-dashed border-orange-500 w-2.5" />
-            평단가 {avgCost.toLocaleString()}
-          </span>
-        )}
         {legend.map((entry) => (
           <span
             key={entry.label}
