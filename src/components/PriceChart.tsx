@@ -407,18 +407,29 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     }
   }, [visibleDateRange]);
 
-  /** Human-readable chip label depending on current period */
+  /** Human-readable chip label depending on current period & year */
   function chipLabel(bDate: string): string {
+    const year = bDate.slice(0, 4);
+    const currentYear = new Date().getFullYear().toString();
+    const isDifferentYear = year !== currentYear;
+
     if (period === 'year') {
-      // bDate is YYYY-MM-DD (first trading day of the year) → show '2026년'
-      return `${bDate.slice(0, 4)}년`;
+      return `${year}년`;
     }
     if (period === 'month') {
-      // bDate is YYYY-MM-DD (first trading day of the month) → show '07월'
-      return `${bDate.slice(5, 7)}월`;
+      return isDifferentYear ? `${year.slice(2)}년 ${bDate.slice(5, 7)}월` : `${bDate.slice(5, 7)}월`;
     }
-    // day / week: show MM-DD
-    return bDate.length > 7 ? bDate.slice(5) : bDate;
+    if (period === 'week') {
+      return isDifferentYear
+        ? `${year.slice(2)}.${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`
+        : `${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`;
+    }
+    // day view: if different year, show '25.12.04', else '07-12'
+    return isDifferentYear
+      ? `${year.slice(2)}.${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`
+      : bDate.length > 7
+      ? bDate.slice(5)
+      : bDate;
   }
 
   return (
