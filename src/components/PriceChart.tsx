@@ -54,6 +54,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
   const [arrows, setArrows] = useState<TradeArrow[]>([]);
   const [period, setPeriod] = useState<AggregationPeriod>('day');
+  // Visible chart date range (YYYY-MM-DD strings) — updated on every scroll/zoom
+  const [visibleDateRange, setVisibleDateRange] = useState<{ from: string; to: string } | null>(null);
   const [ohlc, setOhlc] = useState<{
     date: string;
     open: number;
@@ -226,7 +228,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     const timeScale = chart.timeScale();
     const TIME_AXIS_HEIGHT = 28;
 
-    function computeArrows() {
+    function computeArrowsAndVisibleRange() {
       const groups = new Map<string, { buy: number; sell: number; note: number }>();
       for (const t of trades) {
         if (!t.datetime) continue;
@@ -253,9 +255,25 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         }
       }
       setArrows(next);
+
+      // Update visible date range from logical range → aggregated bar dates
+      const logicalRange = timeScale.getVisibleLogicalRange();
+      if (logicalRange && aggregated.length > 0) {
+        const fromIdx = Math.max(0, Math.floor(logicalRange.from));
+        const toIdx = Math.min(aggregated.length - 1, Math.ceil(logicalRange.to));
+        setVisibleDateRange({
+          from: aggregated[fromIdx]?.date ?? aggregated[0].date,
+          to: aggregated[toIdx]?.date ?? aggregated[aggregated.length - 1].date,
+        });
+      } else if (aggregated.length > 0) {
+        setVisibleDateRange({
+          from: aggregated[0].date,
+          to: aggregated[aggregated.length - 1].date,
+        });
+      }
     }
-    computeArrows();
-    timeScale.subscribeVisibleLogicalRangeChange(computeArrows);
+    computeArrowsAndVisibleRange();
+    timeScale.subscribeVisibleLogicalRangeChange(computeArrowsAndVisibleRange);
 
     let dragMode: 'price' | 'time' | null = null;
     let dragStart: { x: number; y: number } | null = null;
@@ -332,7 +350,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
-      timeScale.unsubscribeVisibleLogicalRangeChange(computeArrows);
+      timeScale.unsubscribeVisibleLogicalRangeChange(computeArrowsAndVisibleRange);
       themeObserver.disconnect();
       chart.remove();
     };
@@ -353,7 +371,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     );
   }, [ohlc?.date, trades, bucketDateForTrade]);
 
-  // Group all trades by date for lower action chips
+  // Group all trades by bucketed date for lower action chips
   const dateTradeSummary = useMemo(() => {
     const map = new Map<string, { time: string; buy: number; sell: number; note: number; firstTrade: Trade }>();
     for (const t of trades) {
@@ -368,6 +386,28 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     }
     return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
   }, [trades, bucketDateForTrade]);
+
+  // Filter chips to current visible chart viewport
+  const visibleChips = useMemo(() => {
+    if (!visibleDateRange) return dateTradeSummary;
+    return dateTradeSummary.filter(
+      (item) => item.time >= visibleDateRange.from && item.time <= visibleDateRange.to
+    );
+  }, [dateTradeSummary, visibleDateRange]);
+
+  /** Human-readable chip label depending on current period */
+  function chipLabel(bDate: string): string {
+    if (period === 'year') {
+      // bDate is YYYY-MM-DD (first trading day of the year) → show '2026년'
+      return `${bDate.slice(0, 4)}년`;
+    }
+    if (period === 'month') {
+      // bDate is YYYY-MM-DD (first trading day of the month) → show '07월'
+      return `${bDate.slice(5, 7)}월`;
+    }
+    // day / week: show MM-DD
+    return bDate.length > 7 ? bDate.slice(5) : bDate;
+  }
 
   return (
     <div>
@@ -465,23 +505,31 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
         />
 
-        {/* Improved Clear Date Trade Chips Lane Below Chart */}
+        {/* Date Trade Chips Lane — filtered to visible chart viewport */}
         <div data-testid="trade-arrow-lane" className="mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
-          <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">기록 날짜:</span>
-          {dateTradeSummary.map((item) => (
-            <button
-              key={item.time}
-              type="button"
-              onClick={() => onPointSelect(item.firstTrade)}
-              aria-label={`${item.buy > 0 ? '매수 ' : item.sell > 0 ? '매도 ' : '메모 '}${item.time}`}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-            >
-              <span>{item.time.length > 7 ? item.time.slice(5) : item.time}</span>
-              {item.buy > 0 && <span className="text-rose-500 font-extrabold">🔴{item.buy > 1 ? item.buy : ''}</span>}
-              {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
-              {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
-            </button>
-          ))}
+          {visibleChips.length > 0 ? (
+            <>
+              <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">기록 날짜:</span>
+              {visibleChips.map((item) => (
+                <button
+                  key={item.time}
+                  type="button"
+                  onClick={() => onPointSelect(item.firstTrade)}
+                  aria-label={`${item.buy > 0 ? '매수 ' : item.sell > 0 ? '매도 ' : '메모 '}${item.time}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[0.68rem] font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span>{chipLabel(item.time)}</span>
+                  {item.buy > 0 && <span className="text-rose-500 font-extrabold">🔴{item.buy > 1 ? item.buy : ''}</span>}
+                  {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
+                  {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
+                </button>
+              ))}
+            </>
+          ) : (
+            <span className="text-[0.65rem] text-zinc-300 dark:text-zinc-600 italic">
+              현재 구간에 기록된 내역 없음
+            </span>
+          )}
         </div>
       </div>
     </div>
