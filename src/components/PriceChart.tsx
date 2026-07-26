@@ -193,9 +193,13 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       }
       const data = param.seriesData.get(candleSeries) as { open?: number; high?: number; low?: number; close?: number } | undefined;
       if (data && data.open != null && data.high != null && data.low != null && data.close != null) {
-        const changePercent = ((data.close - data.open) / data.open) * 100;
+        const currentDate = String(param.time);
+        const idx = aggregated.findIndex((b) => b.date === currentDate);
+        const prevClose = idx > 0 ? aggregated[idx - 1].close : data.open;
+        const changePercent = prevClose > 0 ? ((data.close - prevClose) / prevClose) * 100 : 0;
+
         setOhlc({
-          date: String(param.time),
+          date: currentDate,
           open: data.open,
           high: data.high,
           low: data.low,
@@ -497,9 +501,12 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         <div className="mb-2 flex flex-col gap-1.5 rounded-xl bg-zinc-100/90 p-2.5 text-[0.7rem] font-semibold text-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
           <div className="flex items-center justify-between border-b border-zinc-200/60 pb-1.5 dark:border-zinc-700/60">
             <span className="font-extrabold text-zinc-900 dark:text-zinc-100 text-xs">{formatDateWithDay(ohlc.date)}</span>
-            <span className={ohlc.changePercent >= 0 ? 'font-mono font-bold text-rose-500' : 'font-mono font-bold text-blue-500'}>
-              {ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-[0.65rem] font-medium text-zinc-400 dark:text-zinc-500">(전일 종가 대비)</span>
+              <span className={ohlc.changePercent >= 0 ? 'font-mono font-bold text-rose-500' : 'font-mono font-bold text-blue-500'}>
+                {ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.68rem]">
