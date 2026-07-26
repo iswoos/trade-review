@@ -26,8 +26,8 @@ interface TradeArrow {
   offsetX: number;
 }
 
-const ARROW_COLOR: Record<Trade['side'], string> = { buy: '#dc2626', sell: '#2563eb' };
-// When a date has both a buy and a sell, nudge each arrow off-center so they
+const ARROW_COLOR: Record<Trade['side'], string> = { buy: '#dc2626', sell: '#2563eb', note: '#d97706' };
+// When a date has multiple sides, nudge each arrow off-center so they
 // sit side by side instead of overlapping at the exact same x-coordinate.
 const BOTH_SIDES_OFFSET = 8;
 
@@ -54,6 +54,14 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
   const [legend, setLegend] = useState<{ label: string; color: string; value: number }[]>([]);
   const [arrows, setArrows] = useState<TradeArrow[]>([]);
   const [period, setPeriod] = useState<AggregationPeriod>('day');
+  const [ohlc, setOhlc] = useState<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    changePercent: number;
+  } | null>(null);
 
   const bucketDateByKey = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,8 +101,28 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       aggregated.map((bar) => ({ time: bar.date, open: bar.open, high: bar.high, low: bar.low, close: bar.close }))
     );
 
+    chart.subscribeCrosshairMove?.((param) => {
+      if (!param.time || !param.seriesData) {
+        setOhlc(null);
+        return;
+      }
+      const data = param.seriesData.get(candleSeries) as { open?: number; high?: number; low?: number; close?: number } | undefined;
+      if (data && data.open != null && data.high != null && data.low != null && data.close != null) {
+        const changePercent = ((data.close - data.open) / data.open) * 100;
+        setOhlc({
+          date: String(param.time),
+          open: data.open,
+          high: data.high,
+          low: data.low,
+          close: data.close,
+          changePercent,
+        });
+      } else {
+        setOhlc(null);
+      }
+    });
+
     const closeValues = aggregated.map((bar) => bar.close);
-    // ADR-0008: MA cap expanded from 1~2 (20/60일) to 5 (5/20/50/100/200일); 20일·200일 emphasized (lineWidth 3 vs 1).
     const MOVING_AVERAGES: { window: number; color: string; lineWidth: 1 | 2 | 3 | 4 }[] = [
       { window: 5, color: '#94a3b8', lineWidth: 1 },
       { window: 20, color: '#f59e0b', lineWidth: 3 },
@@ -104,10 +132,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     ];
     const legendEntries: { label: string; color: string; value: number }[] = [];
     for (const ma of MOVING_AVERAGES) {
-      // lastValueVisible defaults to true, which stacks a colored price-axis
-      // badge per series; with 5 MAs + the avg-cost line that clutters the
-      // axis with unlabeled numbers. The top-right legend (below) is the
-      // labeled replacement for this data, so the axis badges are redundant.
       const series = chart.addSeries(LineSeries, { color: ma.color, lineWidth: ma.lineWidth, lastValueVisible: false });
       const maValues = simpleMovingAverage(closeValues, ma.window);
       series.setData(
@@ -138,21 +162,13 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     const timeScale = chart.timeScale();
     const TIME_AXIS_HEIGHT = 28;
 
-    // Trade markers used to render on the candle itself (belowBar/aboveBar),
-    // which lightweight-charts positions relative to the price scale — when
-    // multiple trades landed on the same bar, each extra marker was offset
-    // further away, reading as an awkward, disconnected gap. Rendering them
-    // as a separate arrow row below the time axis (real DOM elements, not
-    // chart-native markers) decouples their position from price entirely and
-    // gives each one its own tap target, so no distance/duration heuristic is
-    // needed to tell a tap from a pan/zoom drag.
     function computeArrows() {
-      const groups = new Map<string, { buy: number; sell: number }>();
+      const groups = new Map<string, { buy: number; sell: number; note: number }>();
       for (const t of trades) {
         if (!t.datetime) continue;
         const time = bucketDateForTrade(t.datetime.slice(0, 10));
         if (!time) continue;
-        const g = groups.get(time) ?? { buy: 0, sell: 0 };
+        const g = groups.get(time) ?? { buy: 0, sell: 0, note: 0 };
         g[t.side] += 1;
         groups.set(time, g);
       }
@@ -160,12 +176,16 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       for (const [time, g] of groups) {
         const x = timeScale.timeToCoordinate(time);
         if (x == null) continue;
-        const bothSides = g.buy > 0 && g.sell > 0;
+        const countSides = (g.buy > 0 ? 1 : 0) + (g.sell > 0 ? 1 : 0) + (g.note > 0 ? 1 : 0);
+        const multi = countSides > 1;
         if (g.buy > 0) {
-          next.push({ time, side: 'buy', count: g.buy, x, offsetX: bothSides ? -BOTH_SIDES_OFFSET : 0 });
+          next.push({ time, side: 'buy', count: g.buy, x, offsetX: multi ? -BOTH_SIDES_OFFSET : 0 });
         }
         if (g.sell > 0) {
-          next.push({ time, side: 'sell', count: g.sell, x, offsetX: bothSides ? BOTH_SIDES_OFFSET : 0 });
+          next.push({ time, side: 'sell', count: g.sell, x, offsetX: multi ? BOTH_SIDES_OFFSET : 0 });
+        }
+        if (g.note > 0) {
+          next.push({ time, side: 'note', count: g.note, x, offsetX: multi ? BOTH_SIDES_OFFSET * 2 : 0 });
         }
       }
       setArrows(next);
@@ -280,6 +300,20 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           </button>
         ))}
       </div>
+
+      {ohlc && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-zinc-100/80 px-2 py-1 text-[0.65rem] font-semibold text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300">
+          <span className="font-bold text-zinc-900 dark:text-zinc-100">{ohlc.date}</span>
+          <span>시 <span className="font-mono">{ohlc.open.toLocaleString()}</span></span>
+          <span>고 <span className="font-mono text-rose-500">{ohlc.high.toLocaleString()}</span></span>
+          <span>저 <span className="font-mono text-blue-500">{ohlc.low.toLocaleString()}</span></span>
+          <span>종 <span className="font-mono font-bold">{ohlc.close.toLocaleString()}</span></span>
+          <span className={ohlc.changePercent >= 0 ? 'font-mono text-rose-500' : 'font-mono text-blue-500'}>
+            ({ohlc.changePercent >= 0 ? '+' : ''}{ohlc.changePercent.toFixed(2)}%)
+          </span>
+        </div>
+      )}
+
       <div style={{ position: 'relative' }}>
         <div
           ref={containerRef}
@@ -288,7 +322,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         />
         <div
           data-testid="ma-legend"
-          className="pointer-events-none absolute right-1.5 top-1.5 rounded-lg border border-zinc-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/90 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
+          className="pointer-events-none absolute right-1.5 top-1.5 z-10 rounded-lg border border-zinc-200/80 bg-white/90 p-1.5 shadow-md backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/90 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
         >
           <div className="mb-1 grid grid-cols-2 gap-x-2 border-b border-zinc-200/60 pb-0.5 text-center font-bold text-zinc-500 dark:border-zinc-800/60 dark:text-zinc-400">
             <span>지표</span>
@@ -320,7 +354,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
               key={`${arrow.time}-${arrow.side}`}
               type="button"
               onClick={() => selectArrowGroup(arrow.time, arrow.side)}
-              aria-label={`${arrow.side === 'buy' ? '매수' : '매도'} ${arrow.time}`}
+              aria-label={`${arrow.side === 'buy' ? '매수' : arrow.side === 'sell' ? '매도' : '메모'} ${arrow.time}`}
               style={{
                 position: 'absolute',
                 left: arrow.x + arrow.offsetX,
@@ -335,7 +369,7 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
                 whiteSpace: 'nowrap',
               }}
             >
-              {arrow.side === 'buy' ? '▲' : '▼'}
+              {arrow.side === 'buy' ? '▲' : arrow.side === 'sell' ? '▼' : '📝'}
               {arrow.count > 1 ? ` ×${arrow.count}` : ''}
             </button>
           ))}

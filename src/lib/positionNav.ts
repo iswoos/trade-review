@@ -2,6 +2,7 @@ export interface PositionListItem {
   ticker: string;
   name: string;
   avgCost: number;
+  totalQuantity?: number;
   lastTradeAt: string;
   lastTradeRecordedAt?: string;
   currentPrice: number | null;

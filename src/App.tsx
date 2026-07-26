@@ -79,6 +79,7 @@ export function App() {
           ticker: p.ticker,
           name: p.name,
           avgCost: p.avgCost,
+          totalQuantity: p.totalQuantity,
           lastTradeAt: p.avgCostHistory[p.avgCostHistory.length - 1]?.at ?? '',
           lastTradeRecordedAt: p.lastTradeRecordedAt,
           currentPrice: prices[p.ticker] ?? null,

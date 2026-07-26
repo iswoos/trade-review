@@ -8,6 +8,7 @@ vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
     addSeries: vi.fn(() => ({ setData: vi.fn() })),
     applyOptions: vi.fn(),
+    subscribeCrosshairMove: vi.fn(),
     priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
     timeScale: vi.fn(() => ({
       setVisibleLogicalRange: vi.fn(),
@@ -45,6 +46,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -76,6 +78,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -109,6 +112,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -149,6 +153,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -189,6 +194,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -232,6 +238,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -273,6 +280,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -312,6 +320,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -406,6 +415,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -444,6 +454,7 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
+        subscribeCrosshairMove: vi.fn(),
         priceScale,
         timeScale: vi.fn(() => ({
           setVisibleLogicalRange: vi.fn(),
@@ -495,6 +506,7 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
+        subscribeCrosshairMove: vi.fn(),
         priceScale,
         timeScale: vi.fn(() => ({
           setVisibleLogicalRange: vi.fn(),
@@ -542,6 +554,7 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
+        subscribeCrosshairMove: vi.fn(),
         priceScale: vi.fn(() => ({ width: () => 50, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
         timeScale: vi.fn(() => ({
           setVisibleLogicalRange,
@@ -600,6 +613,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: addSeriesSpy,
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -636,6 +650,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -670,6 +685,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -708,6 +724,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -746,6 +763,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),
@@ -787,6 +805,7 @@ describe('PriceChart', () => {
       return {
         addSeries: vi.fn(() => ({ setData: vi.fn() })),
         applyOptions: vi.fn(),
+        subscribeCrosshairMove: vi.fn(),
         priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
         timeScale: vi.fn(() => ({
           setVisibleLogicalRange: vi.fn(),
@@ -823,6 +842,7 @@ describe('PriceChart', () => {
     vi.mocked(createChart).mockReturnValue({
       addSeries: vi.fn(() => ({ setData: vi.fn() })),
       applyOptions: vi.fn(),
+      subscribeCrosshairMove: vi.fn(),
       priceScale: vi.fn(() => ({ width: () => 0, setAutoScale: vi.fn(), setVisibleRange: vi.fn(), getVisibleRange: vi.fn() })),
       timeScale: vi.fn(() => ({
         setVisibleLogicalRange: vi.fn(),

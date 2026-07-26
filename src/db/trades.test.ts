@@ -50,7 +50,7 @@ describe('createTrade', () => {
   it('resolves quantity for amount-based input using resolveQuantity', async () => {
     const trade = await createTrade(
       db,
-      baseInput({ quantityType: 'amount', quantityValue: 1_250_000, price: 17.6, fxRateAtTrade: 1400 })
+      baseInput({ quantityType: 'amount_krw', quantityValue: 1_250_000, price: 17.6, fxRateAtTrade: 1400 })
     );
     expect(trade.quantity).toBeCloseTo(1_250_000 / (17.6 * 1400), 6);
   });

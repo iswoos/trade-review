@@ -20,6 +20,7 @@ export async function getPosition(db: IDBPDatabase<TradeReviewDB>, ticker: strin
   let lastTradeRecordedAt = '';
 
   for (const trade of trades) {
+    if (trade.side === 'note') continue;
     state =
       trade.side === 'buy'
         ? applyBuy(state, trade.price, trade.quantity)

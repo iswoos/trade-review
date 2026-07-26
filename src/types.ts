@@ -1,5 +1,5 @@
-export type Side = 'buy' | 'sell';
-export type QuantityType = 'shares' | 'amount';
+export type Side = 'buy' | 'sell' | 'note';
+export type QuantityType = 'shares' | 'amount' | 'amount_krw';
 export type Currency = 'USD' | 'KRW';
 
 export interface Tag {
