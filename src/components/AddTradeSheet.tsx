@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { IDBPDatabase } from 'idb';
 import type { TradeReviewDB } from '../db/schema';
 import type { Currency, QuantityType, Side, Tag, Trade } from '../types';
-import { createTrade } from '../db/trades';
+import { createTrade, updateTrade } from '../db/trades';
 import { TagPicker } from './TagPicker';
 import { fetchQuote, fetchFxRate } from '../api/quotes';
 
@@ -11,30 +11,48 @@ interface AddTradeSheetProps {
   ticker: string;
   name: string;
   availableTags: Tag[];
+  tradeToEdit?: Trade | null;
   onSaved: (trade: Trade) => void;
   onClose: () => void;
 }
 
-export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClose }: AddTradeSheetProps) {
-  const [currency, setCurrency] = useState<Currency>('USD');
-  const [side, setSide] = useState<Side>('buy');
-  const [price, setPrice] = useState('');
-  const [quantityType, setQuantityType] = useState<QuantityType>('shares');
-  const [quantityValue, setQuantityValue] = useState('');
-  const [fxRateAtTrade, setFxRateAtTrade] = useState<number | null>(null);
+export function AddTradeSheet({
+  db,
+  ticker,
+  name,
+  availableTags,
+  tradeToEdit,
+  onSaved,
+  onClose,
+}: AddTradeSheetProps) {
+  const [currency, setCurrency] = useState<Currency>(() => tradeToEdit?.currency ?? 'USD');
+  const [side, setSide] = useState<Side>(() => tradeToEdit?.side ?? 'buy');
+  const [price, setPrice] = useState(() => (tradeToEdit ? String(tradeToEdit.price) : ''));
+  const [quantityType, setQuantityType] = useState<QuantityType>(() => tradeToEdit?.quantityType ?? 'shares');
+  const [quantityValue, setQuantityValue] = useState(() => (tradeToEdit ? String(tradeToEdit.quantityValue) : ''));
+  const [fxRateAtTrade, setFxRateAtTrade] = useState<number | null>(() => tradeToEdit?.fxRateAtTrade ?? null);
   const [fxRateLoading, setFxRateLoading] = useState(false);
   const [fxRateFailed, setFxRateFailed] = useState(false);
-  const [tagIds, setTagIds] = useState<string[]>([]);
-  const [memo, setMemo] = useState('');
-  const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
-  const [timeValue, setTimeValue] = useState('');
+  const [tagIds, setTagIds] = useState<string[]>(() => tradeToEdit?.rationaleTagIds ?? []);
+  const [memo, setMemo] = useState(() => tradeToEdit?.memo ?? '');
+  const [datetimeValue, setDatetimeValue] = useState(() =>
+    tradeToEdit?.datetime
+      ? tradeToEdit.datetime.slice(0, 10)
+      : new Date().toISOString().slice(0, 10)
+  );
+  const [timeValue, setTimeValue] = useState(() =>
+    tradeToEdit?.datetime && tradeToEdit.datetime.includes('T')
+      ? tradeToEdit.datetime.split('T')[1].slice(0, 5)
+      : ''
+  );
 
   useEffect(() => {
+    if (tradeToEdit) return;
     fetchQuote(ticker).then((quote) => {
       if (quote?.price != null) setPrice(String(quote.price));
       if (quote?.currency) setCurrency(quote.currency);
     });
-  }, [ticker]);
+  }, [ticker, tradeToEdit]);
 
   useEffect(() => {
     if (quantityType !== 'amount' || currency === 'KRW' || !datetimeValue) {
@@ -43,6 +61,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
       setFxRateLoading(false);
       return;
     }
+    if (tradeToEdit && tradeToEdit.fxRateAtTrade != null) return;
     let cancelled = false;
     setFxRateLoading(true);
     setFxRateFailed(false);
@@ -59,7 +78,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
     return () => {
       cancelled = true;
     };
-  }, [quantityType, currency, datetimeValue]);
+  }, [quantityType, currency, datetimeValue, tradeToEdit]);
 
   function retryFxRate() {
     if (!datetimeValue) return;
@@ -76,9 +95,9 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
   }
 
   async function handleSave() {
-    const trade = await createTrade(db, {
+    const tradeData = {
       ticker,
-      market: currency === 'KRW' ? 'KR' : 'US',
+      market: (currency === 'KRW' ? 'KR' : 'US') as 'KR' | 'US',
       name,
       currency,
       datetime: new Date(timeValue ? `${datetimeValue}T${timeValue}` : datetimeValue).toISOString(),
@@ -92,7 +111,14 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
       conviction: null,
       memo,
       attachment: null,
-    });
+    };
+
+    let trade: Trade;
+    if (tradeToEdit) {
+      trade = await updateTrade(db, tradeToEdit.id, tradeData);
+    } else {
+      trade = await createTrade(db, tradeData);
+    }
     onSaved(trade);
   }
 

@@ -181,7 +181,7 @@ describe('App', () => {
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: '태그 관리' }));
     await userEvent.type(await screen.findByLabelText('새 태그 이름'), '장기투자');
-    await userEvent.click(screen.getByRole('button', { name: '+ 새 태그' }));
+    await userEvent.click(screen.getByRole('button', { name: '태그 추가' }));
     await screen.findByText('장기투자');
 
     await userEvent.click(screen.getByRole('button', { name: '홈' }));

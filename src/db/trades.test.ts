@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from './schema';
-import { createTrade, listTradesByTicker } from './trades';
+import { createTrade, listTradesByTicker, updateTrade, deleteTrade } from './trades';
 
 let db: IDBPDatabase<TradeReviewDB>;
 
@@ -63,5 +63,27 @@ describe('listTradesByTicker', () => {
     const jobyTrades = await listTradesByTicker(db, 'JOBY');
     expect(jobyTrades).toHaveLength(1);
     expect(jobyTrades[0].ticker).toBe('JOBY');
+  });
+});
+
+describe('updateTrade', () => {
+  it('updates trade details and recalculates resolved quantity', async () => {
+    const original = await createTrade(db, baseInput({ price: 10, quantityValue: 50 }));
+    const updated = await updateTrade(db, original.id, { price: 20, quantityValue: 50, memo: '수정됨' });
+    expect(updated.price).toBe(20);
+    expect(updated.memo).toBe('수정됨');
+
+    const fetched = await listTradesByTicker(db, 'JOBY');
+    expect(fetched[0].price).toBe(20);
+    expect(fetched[0].memo).toBe('수정됨');
+  });
+});
+
+describe('deleteTrade', () => {
+  it('removes the trade from indexedDB', async () => {
+    const trade = await createTrade(db, baseInput());
+    await deleteTrade(db, trade.id);
+    const fetched = await listTradesByTicker(db, 'JOBY');
+    expect(fetched).toHaveLength(0);
   });
 });

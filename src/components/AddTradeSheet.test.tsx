@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { IDBPDatabase } from 'idb';
 import { openTradeReviewDB, type TradeReviewDB } from '../db/schema';
 import { createTag } from '../db/tags';
+import { createTrade } from '../db/trades';
 import { AddTradeSheet } from './AddTradeSheet';
 import * as quotes from '../api/quotes';
 
@@ -189,4 +190,53 @@ describe('AddTradeSheet', () => {
     expect(screen.queryByText('환율 조회 실패')).not.toBeInTheDocument();
     expect(quotes.fetchFxRate).not.toHaveBeenCalled();
   });
+
+  it('prefills fields when tradeToEdit is provided and updates trade on save', async () => {
+    const tag = await createTag(db, '실적발표');
+    const onSaved = vi.fn();
+    const existingTrade = await createTrade(db, {
+      ticker: 'JOBY',
+      market: 'US' as const,
+      name: '조비',
+      currency: 'USD' as const,
+      datetime: '2025-07-10T14:30:00.000Z',
+      datetimeUnknown: false,
+      side: 'sell' as const,
+      price: 25,
+      quantityType: 'shares' as const,
+      quantityValue: 50,
+      fxRateAtTrade: null,
+      rationaleTagIds: [tag.id],
+      conviction: null,
+      memo: '기존 메모',
+      attachment: null,
+    });
+
+    render(
+      <AddTradeSheet
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        availableTags={[tag]}
+        tradeToEdit={existingTrade}
+        onSaved={onSaved}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByDisplayValue('25')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('50')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('기존 메모')).toBeInTheDocument();
+
+    const priceInput = screen.getByLabelText('체결가 ($)');
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '30');
+
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    const saved = onSaved.mock.calls[0][0];
+    expect(saved.id).toBe(existingTrade.id);
+    expect(saved.price).toBe(30);
+  });
 });
+

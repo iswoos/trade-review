@@ -24,7 +24,7 @@ describe('TradeBottomSheet', () => {
     render(
       <TradeBottomSheet trade={{ ...baseTrade, rationaleTagIds: ['t1'] }} tags={tags} onClose={() => {}} />
     );
-    expect(screen.getByText('물타기')).toBeInTheDocument();
+    expect(screen.getByText(/물타기/)).toBeInTheDocument();
   });
 
   it('calls onClose when the close button is clicked', async () => {
@@ -33,4 +33,19 @@ describe('TradeBottomSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it('calls onEdit when edit button is clicked', async () => {
+    const onEdit = vi.fn();
+    render(<TradeBottomSheet trade={baseTrade} tags={[]} onClose={vi.fn()} onEdit={onEdit} />);
+    await userEvent.click(screen.getByRole('button', { name: '수정' }));
+    expect(onEdit).toHaveBeenCalledWith(baseTrade);
+  });
+
+  it('calls onDelete when delete button is clicked', async () => {
+    const onDelete = vi.fn();
+    render(<TradeBottomSheet trade={baseTrade} tags={[]} onClose={vi.fn()} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }));
+    expect(onDelete).toHaveBeenCalledWith(baseTrade);
+  });
 });
+
