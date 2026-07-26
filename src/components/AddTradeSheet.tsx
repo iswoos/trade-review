@@ -4,7 +4,7 @@ import type { TradeReviewDB } from '../db/schema';
 import type { Currency, QuantityType, Side, Tag, Trade } from '../types';
 import { createTrade } from '../db/trades';
 import { TagPicker } from './TagPicker';
-import { fetchQuote } from '../api/quotes';
+import { fetchQuote, fetchFxRate } from '../api/quotes';
 
 interface AddTradeSheetProps {
   db: IDBPDatabase<TradeReviewDB>;
@@ -21,7 +21,9 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
   const [price, setPrice] = useState('');
   const [quantityType, setQuantityType] = useState<QuantityType>('shares');
   const [quantityValue, setQuantityValue] = useState('');
-  const [fxRateAtTrade, setFxRateAtTrade] = useState('');
+  const [fxRateAtTrade, setFxRateAtTrade] = useState<number | null>(null);
+  const [fxRateLoading, setFxRateLoading] = useState(false);
+  const [fxRateFailed, setFxRateFailed] = useState(false);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [memo, setMemo] = useState('');
   const [datetimeValue, setDatetimeValue] = useState(() => new Date().toISOString().slice(0, 10));
@@ -33,6 +35,45 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
       if (quote?.currency) setCurrency(quote.currency);
     });
   }, [ticker]);
+
+  useEffect(() => {
+    if (quantityType !== 'amount' || currency === 'KRW' || !datetimeValue) {
+      setFxRateAtTrade(null);
+      setFxRateFailed(false);
+      setFxRateLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setFxRateLoading(true);
+    setFxRateFailed(false);
+    fetchFxRate(datetimeValue).then((rate) => {
+      if (cancelled) return;
+      setFxRateLoading(false);
+      if (rate == null) {
+        setFxRateFailed(true);
+        setFxRateAtTrade(null);
+      } else {
+        setFxRateAtTrade(rate);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [quantityType, currency, datetimeValue]);
+
+  function retryFxRate() {
+    if (!datetimeValue) return;
+    setFxRateFailed(false);
+    setFxRateLoading(true);
+    fetchFxRate(datetimeValue).then((rate) => {
+      setFxRateLoading(false);
+      if (rate == null) {
+        setFxRateFailed(true);
+      } else {
+        setFxRateAtTrade(rate);
+      }
+    });
+  }
 
   async function handleSave() {
     const trade = await createTrade(db, {
@@ -46,7 +87,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
       price: Number(price),
       quantityType,
       quantityValue: Number(quantityValue),
-      fxRateAtTrade: quantityType === 'amount' && currency !== 'KRW' ? Number(fxRateAtTrade) : null,
+      fxRateAtTrade: quantityType === 'amount' && currency !== 'KRW' ? fxRateAtTrade : null,
       rationaleTagIds: tagIds,
       conviction: null,
       memo,
@@ -160,16 +201,22 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
           />
         </label>
         {quantityType === 'amount' && currency !== 'KRW' && (
-          <label className="text-xs text-zinc-500 dark:text-zinc-400">
-            체결 시점 환율
-            <input
-              aria-label="체결 시점 환율"
-              value={fxRateAtTrade}
-              onChange={(e) => setFxRateAtTrade(e.target.value)}
-              inputMode="decimal"
-              className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-            />
-          </label>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+            {fxRateLoading && <p>환율 조회 중...</p>}
+            {fxRateFailed && (
+              <div className="flex items-center gap-2">
+                <p className="text-loss">환율 조회 실패</p>
+                <button
+                  type="button"
+                  onClick={retryFxRate}
+                  className="rounded-full border border-zinc-200 px-2 py-0.5 text-xs dark:border-zinc-700"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+            {fxRateAtTrade != null && !fxRateLoading && <p>체결 시점 환율: {fxRateAtTrade}</p>}
+          </div>
         )}
         <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">매수/매도 이유</p>
         <TagPicker tags={availableTags} selectedIds={tagIds} onChange={setTagIds} />
@@ -189,7 +236,7 @@ export function AddTradeSheet({ db, ticker, name, availableTags, onSaved, onClos
             !price.trim() ||
             !quantityValue.trim() ||
             tagIds.length === 0 ||
-            (quantityType === 'amount' && currency !== 'KRW' && !fxRateAtTrade)
+            (quantityType === 'amount' && currency !== 'KRW' && fxRateAtTrade == null)
           }
           className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-40"
         >
