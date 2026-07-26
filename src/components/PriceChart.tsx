@@ -395,6 +395,10 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     );
   }, [dateTradeSummary, visibleDateRange]);
 
+  // Toggle: show only visible-range chips vs. all chips
+  const [showAllChips, setShowAllChips] = useState(false);
+  const displayedChips = showAllChips ? dateTradeSummary : visibleChips;
+
   /** Human-readable chip label depending on current period */
   function chipLabel(bDate: string): string {
     if (period === 'year') {
@@ -505,12 +509,37 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
           style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
         />
 
-        {/* Date Trade Chips Lane — filtered to visible chart viewport */}
-        <div data-testid="trade-arrow-lane" className="mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
-          {visibleChips.length > 0 ? (
-            <>
-              <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">기록 날짜:</span>
-              {visibleChips.map((item) => (
+        {/* Date Trade Chips Lane */}
+        <div data-testid="trade-arrow-lane" className="mt-2 flex flex-col gap-1 py-1">
+          {/* Header row: label + range toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-[0.65rem] font-bold text-zinc-400 shrink-0">
+              기록 날짜
+              {!showAllChips && visibleChips.length < dateTradeSummary.length && (
+                <span className="ml-1 text-zinc-300 dark:text-zinc-600 font-normal">
+                  ({visibleChips.length}/{dateTradeSummary.length})
+                </span>
+              )}
+            </span>
+            {dateTradeSummary.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllChips((v) => !v)}
+                className={`text-[0.6rem] font-bold px-2 py-0.5 rounded-full border transition ${
+                  showAllChips
+                    ? 'bg-zinc-800 text-zinc-100 border-zinc-700 dark:bg-zinc-200 dark:text-zinc-800 dark:border-zinc-300'
+                    : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                }`}
+              >
+                {showAllChips ? '현재 구간만' : '전체 보기'}
+              </button>
+            )}
+          </div>
+
+          {/* Chip scroll row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none">
+            {displayedChips.length > 0 ? (
+              displayedChips.map((item) => (
                 <button
                   key={item.time}
                   type="button"
@@ -523,13 +552,13 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
                   {item.sell > 0 && <span className="text-blue-500 font-extrabold">🔵{item.sell > 1 ? item.sell : ''}</span>}
                   {item.note > 0 && <span className="text-amber-500 font-extrabold">📝{item.note > 1 ? item.note : ''}</span>}
                 </button>
-              ))}
-            </>
-          ) : (
-            <span className="text-[0.65rem] text-zinc-300 dark:text-zinc-600 italic">
-              현재 구간에 기록된 내역 없음
-            </span>
-          )}
+              ))
+            ) : (
+              <span className="text-[0.65rem] text-zinc-300 dark:text-zinc-600 italic">
+                {showAllChips ? '기록된 내역 없음' : '현재 구간에 기록된 내역 없음'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
