@@ -120,10 +120,6 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       localization: {
         locale: 'ko-KR',
         dateFormat: 'yyyy.MM.dd',
-        timeFormatter: (time: any) => formatDateWithDay(time),
-      },
-      timeScale: {
-        tickMarkFormatter: (time: any) => formatDateWithDay(time),
       },
       ...themeOptions(isDarkMode()),
     });
@@ -456,12 +452,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         ? `${year.slice(2)}.${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`
         : `${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`;
     }
-    // day view: if different year, show '25.12.04', else '07-12'
-    return isDifferentYear
-      ? `${year.slice(2)}.${bDate.slice(5, 7)}.${bDate.slice(8, 10)}`
-      : bDate.length > 7
-      ? bDate.slice(5)
-      : bDate;
+    // day view: 2026.07.26(일)
+    return formatDateWithDay(bDate);
   }
 
   return (
