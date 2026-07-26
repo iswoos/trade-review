@@ -292,4 +292,87 @@ describe('ChartScreen', () => {
     expect(backSpy).toHaveBeenCalledOnce();
     backSpy.mockRestore();
   });
+
+  it('allows editing a trade from the detail bottom sheet', async () => {
+    const trade = await createTrade(db, {
+      ticker: 'JOBY',
+      market: 'US',
+      name: '조비',
+      currency: 'USD',
+      datetime: '2025-07-10T00:00:00.000Z',
+      datetimeUnknown: false,
+      side: 'buy',
+      price: 11.36,
+      quantityType: 'shares',
+      quantityValue: 100,
+      fxRateAtTrade: null,
+      rationaleTagIds: [],
+      conviction: null,
+      memo: '',
+      attachment: null,
+    });
+    const onTradeSaved = vi.fn();
+
+    render(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[item()]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={onTradeSaved}
+      />
+    );
+
+    const tradeRow = await screen.findByRole('button', { name: /매수 11.36/ });
+    await userEvent.click(tradeRow);
+
+    await userEvent.click(screen.getByRole('button', { name: '수정' }));
+    expect(await screen.findByRole('dialog', { name: '매매 기록 추가' })).toBeInTheDocument();
+  });
+
+  it('allows deleting a trade from the detail bottom sheet', async () => {
+    await createTrade(db, {
+      ticker: 'JOBY',
+      market: 'US',
+      name: '조비',
+      currency: 'USD',
+      datetime: '2025-07-10T00:00:00.000Z',
+      datetimeUnknown: false,
+      side: 'buy',
+      price: 11.36,
+      quantityType: 'shares',
+      quantityValue: 100,
+      fxRateAtTrade: null,
+      rationaleTagIds: [],
+      conviction: null,
+      memo: '',
+      attachment: null,
+    });
+    const onTradeSaved = vi.fn();
+
+    render(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[item()]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={onTradeSaved}
+      />
+    );
+
+    const tradeRow = await screen.findByRole('button', { name: /매수 11.36/ });
+    await userEvent.click(tradeRow);
+
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await waitFor(() => {
+      expect(onTradeSaved).toHaveBeenCalledOnce();
+      expect(screen.queryByRole('dialog', { name: '매매 상세' })).not.toBeInTheDocument();
+    });
+  });
 });

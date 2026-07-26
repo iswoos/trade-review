@@ -29,7 +29,7 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
           type="button"
           onClick={onOpenTagManagement}
           aria-label="태그 관리"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-lg text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
         >
           🏷️
         </button>

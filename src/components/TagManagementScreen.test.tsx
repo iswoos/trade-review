@@ -26,7 +26,7 @@ describe('TagManagementScreen', () => {
   it('creates a new tag and shows it in the list immediately', async () => {
     render(<TagManagementScreen db={db} onBack={vi.fn()} />);
     await userEvent.type(screen.getByLabelText('새 태그 이름'), '장기투자');
-    await userEvent.click(screen.getByRole('button', { name: '+ 새 태그' }));
+    await userEvent.click(screen.getByRole('button', { name: '태그 추가' }));
     expect(await screen.findByText('장기투자')).toBeInTheDocument();
   });
 
@@ -41,11 +41,11 @@ describe('TagManagementScreen', () => {
     expect(screen.queryByText('감')).not.toBeInTheDocument();
   });
 
-  it('archives a tag and removes it from the visible list', async () => {
+  it('deletes a tag and removes it from the visible list', async () => {
     await createTag(db, '지인추천');
     render(<TagManagementScreen db={db} onBack={vi.fn()} />);
     await screen.findByText('지인추천');
-    await userEvent.click(screen.getByRole('button', { name: '지인추천 보관' }));
+    await userEvent.click(screen.getByRole('button', { name: '지인추천 삭제' }));
     await waitFor(() => expect(screen.queryByText('지인추천')).not.toBeInTheDocument());
   });
 

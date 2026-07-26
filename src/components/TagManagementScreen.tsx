@@ -92,11 +92,11 @@ export function TagManagementScreen({ db, onBack }: TagManagementScreenProps) {
             )}
             <button
               type="button"
-              aria-label={`${tag.name} 보관`}
+              aria-label={`${tag.name} 삭제`}
               onClick={() => handleArchive(tag.id)}
-              className="rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60"
             >
-              보관
+              삭제
             </button>
           </li>
         ))}
@@ -113,9 +113,9 @@ export function TagManagementScreen({ db, onBack }: TagManagementScreenProps) {
         <button
           type="button"
           onClick={handleCreate}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white shadow-sm active:scale-[0.98]"
         >
-          + 새 태그
+          태그 추가
         </button>
       </div>
     </div>

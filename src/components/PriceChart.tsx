@@ -204,6 +204,9 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
     }
 
     function handleTouchMove(event: TouchEvent) {
+      if (dragMode && event.cancelable) {
+        event.preventDefault();
+      }
       const touch = event.touches[0];
       if (!touch || !dragMode || !dragStart) return;
       const rect = container!.getBoundingClientRect();
@@ -232,8 +235,8 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
       dragStartLogicalRange = null;
     }
 
-    container.addEventListener('touchstart', handleTouchStart);
-    container.addEventListener('touchmove', handleTouchMove);
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd);
 
     const themeObserver = new MutationObserver(() => {
@@ -278,16 +281,38 @@ export function PriceChart({ history, trades, avgCost, onPointSelect }: PriceCha
         ))}
       </div>
       <div style={{ position: 'relative' }}>
-        <div ref={containerRef} data-testid="price-chart" style={{ width: '100%', overflowX: 'auto' }} />
+        <div
+          ref={containerRef}
+          data-testid="price-chart"
+          style={{ width: '100%', overflowX: 'auto', touchAction: 'none' }}
+        />
         <div
           data-testid="ma-legend"
-          style={{ position: 'absolute', top: 4, right: 4, fontSize: '0.65rem', textAlign: 'right', pointerEvents: 'none' }}
+          className="pointer-events-none absolute right-1.5 top-1.5 rounded-lg border border-zinc-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/90 text-[0.625rem] text-zinc-600 dark:text-zinc-300"
         >
-          {legend.map((entry) => (
-            <div key={entry.label} style={{ color: entry.color }}>
-              {entry.label} {entry.value}
-            </div>
-          ))}
+          <div className="mb-1 grid grid-cols-2 gap-x-2 border-b border-zinc-200/60 pb-0.5 text-center font-bold text-zinc-500 dark:border-zinc-800/60 dark:text-zinc-400">
+            <span>지표</span>
+            <span>현재값</span>
+          </div>
+          <div className="flex flex-col gap-0.5 font-mono">
+            {avgCost != null && (
+              <div className="grid grid-cols-2 items-center gap-x-2 text-right">
+                <span className="flex items-center gap-1 font-sans font-medium text-orange-600 dark:text-orange-400">
+                  <span className="inline-block border-b-2 border-dashed border-orange-500 w-2.5" />
+                  평단가
+                </span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{avgCost.toLocaleString()}</span>
+              </div>
+            )}
+            {legend.map((entry) => (
+              <div key={entry.label} className="grid grid-cols-2 items-center gap-x-2 text-right">
+                <span className="font-semibold" style={{ color: entry.color }}>
+                  {entry.label}
+                </span>
+                <span>{entry.value.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div data-testid="trade-arrow-lane" style={{ position: 'relative', height: 20 }}>
           {arrows.map((arrow) => (

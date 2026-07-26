@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IDBPDatabase } from 'idb';
 import type { TradeReviewDB } from '../db/schema';
 import type { Tag, Trade } from '../types';
-import { listTradesByTicker } from '../db/trades';
+import { deleteTrade, listTradesByTicker } from '../db/trades';
 import { getPosition } from '../db/positions';
 import { fetchHistory, type HistoryBar } from '../api/quotes';
 import { PriceChart } from './PriceChart';
@@ -38,6 +38,7 @@ export function ChartScreen({
   const [history, setHistory] = useState<HistoryBar[]>([]);
   const [selected, setSelected] = useState<Trade | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
   const activeTickerRef = useRef(ticker);
 
   async function reload() {
@@ -54,6 +55,7 @@ export function ChartScreen({
   useEffect(() => {
     activeTickerRef.current = ticker;
     setShowAddSheet(false);
+    setTradeToEdit(null);
     setSelected(null);
     reload();
     fetchHistory(ticker).then((bars) => {
@@ -71,8 +73,26 @@ export function ChartScreen({
   async function handleTradeSaved() {
     await reload();
     setShowAddSheet(false);
+    setTradeToEdit(null);
     onTradeSaved();
   }
+
+  function handleEditTrade(trade: Trade) {
+    setSelected(null);
+    setTradeToEdit(trade);
+    setShowAddSheet(true);
+  }
+
+  async function handleDeleteTrade(trade: Trade) {
+    setSelected(null);
+    await deleteTrade(db, trade.id);
+    await handleTradeSaved();
+  }
+
+  const selectedDate = selected?.datetime ? selected.datetime.slice(0, 10) : null;
+  const tradesOnSameDate = selectedDate
+    ? trades.filter((t) => t.datetime && t.datetime.slice(0, 10) === selectedDate)
+    : [];
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-3 p-4 pb-24">
@@ -121,7 +141,10 @@ export function ChartScreen({
 
       <button
         type="button"
-        onClick={() => setShowAddSheet(true)}
+        onClick={() => {
+          setTradeToEdit(null);
+          setShowAddSheet(true);
+        }}
         className="rounded-xl bg-accent py-3 text-sm font-bold text-white active:scale-[0.98]"
       >
         + 매매 기록 추가
@@ -137,8 +160,12 @@ export function ChartScreen({
               ticker={ticker}
               name={name}
               availableTags={tags}
+              tradeToEdit={tradeToEdit}
               onSaved={handleTradeSaved}
-              onClose={() => setShowAddSheet(false)}
+              onClose={() => {
+                setShowAddSheet(false);
+                setTradeToEdit(null);
+              }}
             />
           </div>
         </div>
@@ -146,7 +173,14 @@ export function ChartScreen({
 
       {selected && (
         <div className="fixed inset-0 z-20 flex items-end bg-zinc-900/40">
-          <TradeBottomSheet trade={selected} tags={tags} onClose={() => setSelected(null)} />
+          <TradeBottomSheet
+            trade={selected}
+            tags={tags}
+            tradesOnSameDate={tradesOnSameDate}
+            onClose={() => setSelected(null)}
+            onEdit={handleEditTrade}
+            onDelete={handleDeleteTrade}
+          />
         </div>
       )}
     </div>
