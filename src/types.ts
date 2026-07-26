@@ -45,4 +45,7 @@ export interface Position {
   avgCostHistory: { at: string; avgCost: number }[];
   realizedPl: number;
   lastTradeRecordedAt: string;
+  buyCnt: number;
+  sellCnt: number;
+  noteCnt: number;
 }

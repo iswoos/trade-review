@@ -21,7 +21,7 @@ describe('TickerSearch', () => {
     render(
       <TickerSearch
         positions={[
-          { ticker: 'JOBY', name: '조비', avgCost: 10, lastTradeAt: '2025-01-01T00:00:00.000Z', currentPrice: 11 },
+          { ticker: 'JOBY', name: '조비', avgCost: 10, lastTradeAt: '2025-01-01T00:00:00.000Z', currentPrice: 11, buyCnt: 0, sellCnt: 0, noteCnt: 0 },
         ]}
         onSelectTicker={vi.fn()}
       />
@@ -42,7 +42,7 @@ describe('TickerSearch', () => {
     render(
       <TickerSearch
         positions={[
-          { ticker: 'AAPL', name: 'Apple Inc.', avgCost: 100, lastTradeAt: '2025-01-01T00:00:00.000Z', currentPrice: 110 },
+          { ticker: 'AAPL', name: 'Apple Inc.', avgCost: 100, lastTradeAt: '2025-01-01T00:00:00.000Z', currentPrice: 110, buyCnt: 0, sellCnt: 0, noteCnt: 0 },
         ]}
         onSelectTicker={onSelectTicker}
       />
