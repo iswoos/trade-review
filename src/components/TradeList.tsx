@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { Tag, Trade } from '../types';
 
 interface TradeListProps {
@@ -192,9 +192,28 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
 
       <ul aria-label="매매 목록" className="flex flex-col gap-2.5">
         {filteredTrades.length > 0 ? (
-          filteredTrades.map((trade) => (
-            <TradeRow key={trade.id} trade={trade} tags={tags} onSelect={onSelect} />
-          ))
+          filteredTrades.map((trade, index) => {
+            const tradeYear = trade.datetime ? trade.datetime.slice(0, 4) : '';
+            const prevTradeYear =
+              index > 0 && filteredTrades[index - 1].datetime
+                ? filteredTrades[index - 1].datetime!.slice(0, 4)
+                : null;
+            const isNewYearGroup = tradeYear && tradeYear !== prevTradeYear;
+
+            return (
+              <Fragment key={trade.id}>
+                {isNewYearGroup && (
+                  <li className="mt-1.5 mb-0.5 flex items-center gap-2">
+                    <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[0.68rem] font-black text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
+                      📅 {tradeYear}년
+                    </span>
+                    <div className="h-[1px] flex-1 bg-zinc-200/60 dark:bg-zinc-800/60" />
+                  </li>
+                )}
+                <TradeRow trade={trade} tags={tags} onSelect={onSelect} />
+              </Fragment>
+            );
+          })
         ) : (
           <li className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs italic text-zinc-400 dark:border-zinc-800">
             해당하는 기록 내역이 없습니다.
