@@ -25,8 +25,8 @@ describe('HomeScreen', () => {
 
     const row = screen.getByRole('button', { name: /AAPL/ });
     expect(row).toHaveTextContent('Apple Inc.');
-    expect(row).toHaveTextContent('평단 100');
-    expect(row).toHaveTextContent('현재가 110');
+    expect(row).toHaveTextContent('100');
+    expect(row).toHaveTextContent('110');
     expect(row).toHaveTextContent('+10.0%');
   });
 

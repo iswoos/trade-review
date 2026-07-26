@@ -57,44 +57,84 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
 
       <ul aria-label="보유 주식 목록" className="flex flex-col gap-2.5">
         {sorted.map((item) => {
+          const totalQuantity = item.totalQuantity ?? 0;
+          const totalInvested = item.avgCost * totalQuantity;
+          const totalEvaluation =
+            item.currentPrice != null ? item.currentPrice * totalQuantity : null;
+          const pnlAmount =
+            totalEvaluation != null ? totalEvaluation - totalInvested : null;
           const pnlPercent =
             item.currentPrice != null && item.avgCost > 0
               ? ((item.currentPrice - item.avgCost) / item.avgCost) * 100
               : null;
           const isLoss = pnlPercent != null && pnlPercent < 0;
+
           return (
             <li key={item.ticker}>
               <button
                 type="button"
                 onClick={() => onSelectTicker(item.ticker, item.name)}
-                className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm shadow-zinc-900/5 transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
+                className="flex w-full flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm shadow-zinc-900/5 transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <span className="flex flex-col">
-                  <span className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                    {item.ticker}
-                  </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{item.name}</span>
-                  <span className="mt-0.5 text-[0.68rem] text-zinc-400 dark:text-zinc-500">평단 {item.avgCost}</span>
-                </span>
-                <span className="flex flex-col items-end">
-                  {item.currentPrice != null && (
-                    <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                      현재가 {item.currentPrice}
+                <div className="flex items-start justify-between w-full">
+                  <div className="flex flex-col">
+                    <span className="text-base font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+                      {item.ticker}
                     </span>
-                  )}
-                  {pnlPercent != null && (
-                    <span
-                      className={
-                        isLoss
-                          ? 'mt-1 rounded-full bg-loss/10 px-2 py-0.5 text-xs font-bold text-loss'
-                          : 'mt-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-bold text-accent'
-                      }
-                    >
-                      {pnlPercent >= 0 ? '+' : ''}
-                      {pnlPercent.toFixed(1)}%
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{item.name}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    {item.currentPrice != null && (
+                      <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50 font-mono">
+                        {item.currentPrice.toLocaleString()}
+                      </span>
+                    )}
+                    {pnlPercent != null && (
+                      <span
+                        className={
+                          isLoss
+                            ? 'mt-0.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-black text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
+                            : 'mt-0.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-black text-rose-600 dark:bg-rose-950/50 dark:text-rose-400'
+                        }
+                      >
+                        {pnlPercent >= 0 ? '+' : ''}
+                        {pnlPercent.toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-1 grid grid-cols-3 gap-2 rounded-xl bg-zinc-50/80 p-2.5 dark:bg-zinc-800/40 text-[0.72rem]">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-400 dark:text-zinc-500">평단가/수량</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
+                      {item.avgCost.toLocaleString()} / {item.totalQuantity}주
                     </span>
-                  )}
-                </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-zinc-400 dark:text-zinc-500">투자금액</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
+                      {Math.round(totalInvested).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-zinc-400 dark:text-zinc-500">평가손익</span>
+                    {pnlAmount != null ? (
+                      <span
+                        className={
+                          isLoss
+                            ? 'font-bold text-blue-600 dark:text-blue-400 font-mono'
+                            : 'font-bold text-rose-600 dark:text-rose-400 font-mono'
+                        }
+                      >
+                        {pnlAmount >= 0 ? '+' : ''}
+                        {Math.round(pnlAmount).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400 font-mono">-</span>
+                    )}
+                  </div>
+                </div>
               </button>
             </li>
           );

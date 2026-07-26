@@ -24,9 +24,9 @@ describe('resolveQuantity', () => {
     expect(quantity).toBe(20);
   });
 
-  it('converts a KRW amount into shares of a non-KRW ticker using fxRateAtTrade', () => {
+  it('converts a KRW amount into shares of a non-KRW ticker using fxRateAtTrade when quantityType is "amount_krw"', () => {
     const quantity = resolveQuantity({
-      quantityType: 'amount',
+      quantityType: 'amount_krw',
       quantityValue: 1_250_000,
       price: 17.6,
       tickerCurrency: 'USD',
@@ -35,10 +35,21 @@ describe('resolveQuantity', () => {
     expect(quantity).toBeCloseTo(1_250_000 / (17.6 * 1400), 6);
   });
 
-  it('throws when converting a non-KRW ticker amount without fxRateAtTrade', () => {
+  it('divides USD amount by USD price when quantityType is "amount" for a USD ticker (no FX needed)', () => {
+    const quantity = resolveQuantity({
+      quantityType: 'amount',
+      quantityValue: 100,
+      price: 20,
+      tickerCurrency: 'USD',
+      fxRateAtTrade: null,
+    });
+    expect(quantity).toBe(5);
+  });
+
+  it('throws when converting an "amount_krw" input without fxRateAtTrade', () => {
     expect(() =>
       resolveQuantity({
-        quantityType: 'amount',
+        quantityType: 'amount_krw',
         quantityValue: 1_250_000,
         price: 17.6,
         tickerCurrency: 'USD',

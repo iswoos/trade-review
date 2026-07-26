@@ -12,13 +12,16 @@ export function resolveQuantity(input: ResolveQuantityInput): number {
   if (input.quantityType === 'shares') {
     return input.quantityValue;
   }
+  if (input.quantityType === 'amount_krw') {
+    if (input.fxRateAtTrade == null) {
+      throw new Error('fxRateAtTrade is required when quantityType is "amount_krw"');
+    }
+    return input.quantityValue / (input.price * input.fxRateAtTrade);
+  }
+  // input.quantityType === 'amount'
   if (input.tickerCurrency === 'KRW') {
     return input.quantityValue / input.price;
   }
-  if (input.fxRateAtTrade == null) {
-    throw new Error(
-      'fxRateAtTrade is required when quantityType is "amount" and tickerCurrency is not KRW'
-    );
-  }
-  return input.quantityValue / (input.price * input.fxRateAtTrade);
+  // USD currency with quantityType === 'amount' (User input in USD dollars)
+  return input.quantityValue / input.price;
 }

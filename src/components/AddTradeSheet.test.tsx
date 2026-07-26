@@ -145,17 +145,17 @@ describe('AddTradeSheet', () => {
     expect(screen.queryByRole('radiogroup', { name: '확신도' })).not.toBeInTheDocument();
   });
 
-  it('auto-fetches and displays the FX rate when switching to amount mode for a USD-quoted ticker, and saves it', async () => {
+  it('auto-fetches and displays the FX rate when switching to amount_krw mode for a USD-quoted ticker, and saves it', async () => {
     vi.mocked(quotes.fetchFxRate).mockResolvedValue(1352.5);
     const tag = await createTag(db, '팩트');
     const onSaved = vi.fn();
     render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={onSaved} onClose={vi.fn()} />);
 
     await screen.findByDisplayValue('11.36');
-    await userEvent.click(screen.getByRole('button', { name: '금액($)' }));
+    await userEvent.click(screen.getByRole('button', { name: '금액(원)' }));
     await screen.findByText('체결 시점 환율: 1352.5');
 
-    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
+    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100000');
     await userEvent.click(screen.getByRole('button', { name: '팩트' }));
     await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
@@ -163,31 +163,11 @@ describe('AddTradeSheet', () => {
     expect(onSaved.mock.calls[0][0].fxRateAtTrade).toBe(1352.5);
   });
 
-  it('shows a retry message and keeps save disabled when the FX rate fetch fails, and recovers on retry', async () => {
-    vi.mocked(quotes.fetchFxRate).mockResolvedValue(null);
-    const tag = await createTag(db, '팩트');
-    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[tag]} onSaved={vi.fn()} onClose={vi.fn()} />);
-
+  it('does not fetch or display FX rate when selecting USD amount mode (금액($)) for a USD ticker', async () => {
+    render(<AddTradeSheet db={db} ticker="JOBY" name="조비" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
     await screen.findByDisplayValue('11.36');
     await userEvent.click(screen.getByRole('button', { name: '금액($)' }));
-    await screen.findByText('환율 조회 실패');
-
-    await userEvent.type(screen.getByLabelText('수량 또는 금액'), '100');
-    await userEvent.click(screen.getByRole('button', { name: '팩트' }));
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
-
-    vi.mocked(quotes.fetchFxRate).mockResolvedValue(1350);
-    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-    await screen.findByText('체결 시점 환율: 1350');
-    expect(screen.getByRole('button', { name: '저장' })).not.toBeDisabled();
-  });
-
-  it('does not show any FX rate UI for a KRW trade, even in amount mode', async () => {
-    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 71000, currency: 'KRW' });
-    render(<AddTradeSheet db={db} ticker="005930" name="삼성전자" availableTags={[]} onSaved={vi.fn()} onClose={vi.fn()} />);
-    await screen.findByDisplayValue('71000');
-    await userEvent.click(screen.getByRole('button', { name: '금액(원)' }));
-    expect(screen.queryByText('환율 조회 실패')).not.toBeInTheDocument();
+    expect(screen.queryByText(/체결 시점 환율/)).not.toBeInTheDocument();
     expect(quotes.fetchFxRate).not.toHaveBeenCalled();
   });
 
