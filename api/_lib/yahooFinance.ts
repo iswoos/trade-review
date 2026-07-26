@@ -5,7 +5,12 @@
 
 interface YahooChartMeta {
   regularMarketPrice: number;
-  previousClose: number;
+  // Yahoo Finance가 상황에 따라 다른 필드명으로 전일 종가를 내려줌
+  previousClose?: number;
+  chartPreviousClose?: number;
+  regularMarketPreviousClose?: number;
+  // 등락률을 직접 내려주는 경우도 있음
+  regularMarketChangePercent?: number;
   currency: string;
 }
 
@@ -62,9 +67,22 @@ export async function yahooFinanceQuote(
   const ySym = ensureYahooSuffix(symbol);
   const result = await yahooChartFetch(ySym, { interval: '1d', range: '5d' });
   const price = result.meta.regularMarketPrice;
-  const prevClose = result.meta.previousClose;
-  const dailyChangePercent =
-    prevClose && prevClose !== 0 ? ((price - prevClose) / prevClose) * 100 : null;
+
+  // 1순위: API가 직접 등락률을 내려주는 경우
+  let dailyChangePercent: number | null = null;
+  if (result.meta.regularMarketChangePercent != null) {
+    dailyChangePercent = result.meta.regularMarketChangePercent;
+  } else {
+    // 2순위: 전일 종가로 직접 계산 (필드명 후보 순서대로 시도)
+    const prevClose =
+      result.meta.chartPreviousClose ??
+      result.meta.previousClose ??
+      result.meta.regularMarketPreviousClose;
+    if (prevClose && prevClose !== 0) {
+      dailyChangePercent = ((price - prevClose) / prevClose) * 100;
+    }
+  }
+
   return {
     symbol,
     price,
