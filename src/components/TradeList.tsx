@@ -152,34 +152,48 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* View Mode Switcher Header */}
-      <div className="flex items-center justify-between">
+      {/* View Mode & Sort Header Row */}
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-extrabold text-zinc-700 dark:text-zinc-300">매매 및 메모 내역</h3>
-        <div role="radiogroup" aria-label="보기 방식" className="flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800 text-xs font-bold">
-          <button
-            type="button"
-            aria-pressed={viewMode === 'list'}
-            onClick={() => setViewMode('list')}
-            className={`rounded-lg px-2.5 py-1 transition ${
-              viewMode === 'list'
-                ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
-            }`}
-          >
-            ☰ 목록
-          </button>
-          <button
-            type="button"
-            aria-pressed={viewMode === 'calendar'}
-            onClick={() => setViewMode('calendar')}
-            className={`rounded-lg px-2.5 py-1 transition ${
-              viewMode === 'calendar'
-                ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100'
-                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
-            }`}
-          >
-            📅 달력
-          </button>
+        
+        <div className="flex items-center gap-2">
+          {viewMode === 'list' && (
+            <button
+              type="button"
+              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              title="날짜 정렬 변경"
+            >
+              <span>{sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}</span>
+            </button>
+          )}
+
+          <div role="radiogroup" aria-label="보기 방식" className="flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800 text-xs font-bold">
+            <button
+              type="button"
+              aria-pressed={viewMode === 'list'}
+              onClick={() => setViewMode('list')}
+              className={`rounded-lg px-2.5 py-1 transition ${
+                viewMode === 'list'
+                  ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100'
+                  : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+              }`}
+            >
+              ☰ 목록
+            </button>
+            <button
+              type="button"
+              aria-pressed={viewMode === 'calendar'}
+              onClick={() => setViewMode('calendar')}
+              className={`rounded-lg px-2.5 py-1 transition ${
+                viewMode === 'calendar'
+                  ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100'
+                  : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+              }`}
+            >
+              📅 달력
+            </button>
+          </div>
         </div>
       </div>
 
@@ -187,66 +201,55 @@ export function TradeList({ trades, tags, onSelect }: TradeListProps) {
         <TradeCalendar trades={trades} onSelect={onSelect} />
       ) : (
         <>
-          {/* Header Row: Category Filter Chips & Sort Toggle */}
-          <div className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 dark:border-zinc-800">
-            <div role="radiogroup" aria-label="기록 필터" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs font-bold scrollbar-none">
-              <button
-                type="button"
-                aria-pressed={filter === 'all'}
-                onClick={() => setFilter('all')}
-                className={`rounded-xl px-3 py-1.5 transition ${
-                  filter === 'all'
-                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
-                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400'
-                }`}
-              >
-                전체 ({trades.length})
-              </button>
-              <button
-                type="button"
-                aria-pressed={filter === 'buy'}
-                onClick={() => setFilter('buy')}
-                className={`rounded-xl px-3 py-1.5 transition ${
-                  filter === 'buy'
-                    ? 'bg-buy text-white shadow-sm'
-                    : 'bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400'
-                }`}
-              >
-                🔴 매수 ({buyCount})
-              </button>
-              <button
-                type="button"
-                aria-pressed={filter === 'sell'}
-                onClick={() => setFilter('sell')}
-                className={`rounded-xl px-3 py-1.5 transition ${
-                  filter === 'sell'
-                    ? 'bg-sell text-white shadow-sm'
-                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400'
-                }`}
-              >
-                🔵 매도 ({sellCount})
-              </button>
-              <button
-                type="button"
-                aria-pressed={filter === 'note'}
-                onClick={() => setFilter('note')}
-                className={`rounded-xl px-3 py-1.5 transition ${
-                  filter === 'note'
-                    ? 'bg-amber-600 text-white shadow-sm dark:bg-amber-500'
-                    : 'bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
-                }`}
-              >
-                📝 메모 ({noteCount})
-              </button>
-            </div>
-
+          {/* Category Filter Chips Bar (Full-width clean row) */}
+          <div role="radiogroup" aria-label="기록 필터" className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs font-bold scrollbar-none pb-1 border-b border-zinc-100 dark:border-zinc-800">
             <button
               type="button"
-              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[0.68rem] font-bold text-zinc-600 shadow-sm transition hover:bg-zinc-50 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              title="날짜 정렬 변경"
+              aria-pressed={filter === 'all'}
+              onClick={() => setFilter('all')}
+              className={`rounded-xl px-3 py-1.5 transition ${
+                filter === 'all'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400'
+              }`}
             >
-              <span>{sortOrder === 'desc' ? '↓ 최신순' : '↑ 과거순'}</span>
+              전체 ({trades.length})
+            </button>
+            <button
+              type="button"
+              aria-pressed={filter === 'buy'}
+              onClick={() => setFilter('buy')}
+              className={`rounded-xl px-3 py-1.5 transition ${
+                filter === 'buy'
+                  ? 'bg-buy text-white shadow-sm'
+                  : 'bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400'
+              }`}
+            >
+              🔴 매수 ({buyCount})
+            </button>
+            <button
+              type="button"
+              aria-pressed={filter === 'sell'}
+              onClick={() => setFilter('sell')}
+              className={`rounded-xl px-3 py-1.5 transition ${
+                filter === 'sell'
+                  ? 'bg-sell text-white shadow-sm'
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400'
+              }`}
+            >
+              🔵 매도 ({sellCount})
+            </button>
+            <button
+              type="button"
+              aria-pressed={filter === 'note'}
+              onClick={() => setFilter('note')}
+              className={`rounded-xl px-3 py-1.5 transition ${
+                filter === 'note'
+                  ? 'bg-amber-600 text-white shadow-sm dark:bg-amber-500'
+                  : 'bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
+              }`}
+            >
+              📝 메모 ({noteCount})
             </button>
           </div>
 
