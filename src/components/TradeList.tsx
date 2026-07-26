@@ -14,6 +14,7 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
     .filter((name): name is string => Boolean(name));
   const dateLabel = (trade.datetime ?? '날짜 모름').slice(0, 10);
   const isBuy = trade.side === 'buy';
+  const isNote = trade.side === 'note';
   const currencySymbol = trade.currency === 'KRW' ? '원' : '$';
 
   return (
@@ -22,27 +23,29 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
         type="button"
         onClick={() => onSelect(trade)}
         className="w-full text-left focus:outline-none"
-        aria-label={`${dateLabel} ${isBuy ? '매수' : '매도'} ${trade.price}`}
+        aria-label={`${dateLabel} ${isNote ? '메모' : isBuy ? '매수' : '매도'} ${trade.price}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span
               className={`rounded-md px-2 py-0.5 text-xs font-black text-white ${
-                isBuy ? 'bg-buy' : 'bg-sell'
+                isNote ? 'bg-amber-600 dark:bg-amber-500' : isBuy ? 'bg-buy' : 'bg-sell'
               }`}
             >
-              {isBuy ? '매수' : '매도'}
+              {isNote ? '📝 메모' : isBuy ? '매수' : '매도'}
             </span>
             <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{dateLabel}</span>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
-              {trade.price.toLocaleString()} {currencySymbol}
-            </span>
-            <span className="ml-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-              ({trade.quantity.toLocaleString()}주)
-            </span>
-          </div>
+          {!isNote && (
+            <div className="text-right">
+              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50 font-mono">
+                {trade.price.toLocaleString()} {currencySymbol}
+              </span>
+              <span className="ml-1.5 text-xs text-zinc-400 dark:text-zinc-500 font-mono">
+                ({trade.quantity.toLocaleString()}주)
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="mt-2.5">
