@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { Tag, Trade } from '../types';
 import { TradeCalendar } from './TradeCalendar';
 
@@ -39,8 +39,16 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
   const isNote = trade.side === 'note';
   const currencySymbol = trade.currency === 'KRW' ? '원' : '$';
 
-  const lineCount = trade.memo ? trade.memo.split('\n').length : 0;
-  const isOverflowing = (trade.memo && trade.memo.length > 100) || lineCount > 3;
+  const memoRef = useRef<HTMLParagraphElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  // 글자 수 추정으로는 실제로 3줄(line-clamp-3)을 넘겼는지 알 수 없어
+  // (짧아도 줄바꿈이 많거나 좁은 화면에서 개행되면 넘칠 수 있음), 접힌 상태에서
+  // 실제 렌더링된 높이(scrollHeight vs clientHeight)를 재서 판단한다.
+  useEffect(() => {
+    const el = memoRef.current;
+    setIsOverflowing(el != null && el.scrollHeight > el.clientHeight);
+  }, [trade.memo]);
 
   return (
     <li className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
@@ -96,6 +104,7 @@ function TradeRow({ trade, tags, onSelect }: { trade: Trade; tags: Tag[]; onSele
       {trade.memo && (
         <div className="mt-3 border-t border-zinc-100 pt-2.5 dark:border-zinc-800/60">
           <p
+            ref={memoRef}
             className={
               expanded
                 ? 'text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap'
