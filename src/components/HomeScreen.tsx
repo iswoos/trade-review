@@ -1,9 +1,10 @@
 import { TickerSearch } from './TickerSearch';
 import { ThemeToggle } from './ThemeToggle';
-import { sortPositionItems, type PositionListItem, type SortOrder } from '../lib/positionNav';
+import { sortPositionItems, calculatePortfolioTotal, type PositionListItem, type SortOrder } from '../lib/positionNav';
 
 interface HomeScreenProps {
   positions: PositionListItem[];
+  usdKrwRate: number | null;
   sortOrder: SortOrder;
   onSortOrderChange: (order: SortOrder) => void;
   onSelectTicker: (ticker: string, name: string) => void;
@@ -16,8 +17,11 @@ const SORT_LABELS: Record<SortOrder, string> = {
   pnl: '평가손익순',
 };
 
-export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTicker, onOpenTagManagement }: HomeScreenProps) {
+export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange, onSelectTicker, onOpenTagManagement }: HomeScreenProps) {
   const sorted = sortPositionItems(positions, sortOrder);
+  const portfolioTotal = calculatePortfolioTotal(positions, usdKrwRate);
+  const isTotalLoss = portfolioTotal != null && portfolioTotal.pnlAmount < 0;
+  const isTotalProfit = portfolioTotal != null && portfolioTotal.pnlAmount > 0;
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4">
@@ -35,6 +39,65 @@ export function HomeScreen({ positions, sortOrder, onSortOrderChange, onSelectTi
         </button>
         <ThemeToggle />
       </div>
+
+      {portfolioTotal != null && (
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">포트폴리오 총계</span>
+          <div className="mt-1.5 grid grid-cols-3 gap-2 text-[0.72rem]">
+            <div className="flex flex-col">
+              <span className="text-zinc-400 dark:text-zinc-500">매입금액</span>
+              <span className="font-bold text-zinc-700 dark:text-zinc-300 font-mono">
+                {Math.round(portfolioTotal.totalInvested).toLocaleString()}
+                <span className="text-[0.65rem] font-normal text-zinc-400"> 원</span>
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-zinc-400 dark:text-zinc-500">평가금액</span>
+              <span
+                className={
+                  isTotalLoss
+                    ? 'font-bold text-blue-600 dark:text-blue-400 font-mono'
+                    : isTotalProfit
+                    ? 'font-bold text-rose-600 dark:text-rose-400 font-mono'
+                    : 'font-bold text-zinc-700 dark:text-zinc-300 font-mono'
+                }
+              >
+                {Math.round(portfolioTotal.totalEvaluation).toLocaleString()}
+                <span className="text-[0.65rem] font-normal text-zinc-400"> 원</span>
+              </span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-zinc-400 dark:text-zinc-500">평가손익 (수익률)</span>
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                <span
+                  className={
+                    isTotalLoss
+                      ? 'font-black text-blue-600 dark:text-blue-400 font-mono'
+                      : isTotalProfit
+                      ? 'font-black text-rose-600 dark:text-rose-400 font-mono'
+                      : 'font-bold text-zinc-600 dark:text-zinc-400 font-mono'
+                  }
+                >
+                  {portfolioTotal.pnlAmount > 0 ? '+' : ''}
+                  {Math.round(portfolioTotal.pnlAmount).toLocaleString()}
+                </span>
+                <span
+                  className={
+                    isTotalLoss
+                      ? 'text-[0.68rem] font-bold text-blue-600 dark:text-blue-400 font-mono'
+                      : isTotalProfit
+                      ? 'text-[0.68rem] font-bold text-rose-600 dark:text-rose-400 font-mono'
+                      : 'text-[0.68rem] font-bold text-zinc-500 dark:text-zinc-400 font-mono'
+                  }
+                >
+                  ({portfolioTotal.pnlPercent > 0 ? '+' : ''}
+                  {portfolioTotal.pnlPercent.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">보유 주식</h2>

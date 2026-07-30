@@ -9,7 +9,6 @@ function mockRes() {
 }
 
 beforeEach(() => {
-  process.env.DATA_GO_KR_API_KEY = 'test-key';
   process.env.TWELVE_DATA_API_KEY = 'test-key';
 });
 
@@ -24,25 +23,25 @@ describe('GET /api/history', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it('routes Korean symbols (.KS) to data.go.kr and maps rows to {date, open, high, low, close} bars, oldest first', async () => {
+  it('routes Korean symbols (.KS) to Yahoo Finance and maps rows to {date, open, high, low, close} bars, oldest first', async () => {
+    const ts17 = Math.floor(Date.UTC(2026, 6, 17) / 1000);
+    const ts18 = Math.floor(Date.UTC(2026, 6, 18) / 1000);
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          response: {
-            header: { resultCode: '00', resultMsg: 'OK' },
-            body: {
-              items: {
-                item: [
-                  { basDt: '20260718', srtnCd: '005930', clpr: '72000', mkp: '71500', hipr: '72500', lopr: '71000' },
-                  { basDt: '20260717', srtnCd: '005930', clpr: '71000', mkp: '70500', hipr: '71500', lopr: '70000' },
-                ],
+          chart: {
+            result: [
+              {
+                meta: { regularMarketPrice: 72000, regularMarketTime: ts18, gmtoffset: 32400, currency: 'KRW' },
+                timestamp: [ts17, ts18],
+                indicators: {
+                  quote: [{ open: [70500, 71500], high: [71500, 72500], low: [70000, 71000], close: [71000, 72000] }],
+                },
               },
-              numOfRows: 2,
-              pageNo: 1,
-              totalCount: 2,
-            },
+            ],
+            error: null,
           },
         }),
       })
@@ -57,7 +56,7 @@ describe('GET /api/history', () => {
     });
   });
 
-  it('returns 502 when data.go.kr lookup fails for a Korean symbol', async () => {
+  it('returns 502 when the Yahoo Finance lookup fails for a Korean symbol', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
     const res = mockRes();
     await handler({ query: { symbol: '005930.KS' } } as any, res);

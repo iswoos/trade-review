@@ -16,7 +16,7 @@ describe('twelveDataQuote', () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ symbol: 'AAPL', close: '320.27' }) })
     );
     const quote = await twelveDataQuote('AAPL');
-    expect(quote).toEqual({ symbol: 'AAPL', price: 320.27 });
+    expect(quote).toEqual({ symbol: 'AAPL', price: 320.27, dailyChangePercent: null });
   });
 
   it('requests the quote endpoint with the symbol', async () => {
