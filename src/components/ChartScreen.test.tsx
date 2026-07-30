@@ -378,4 +378,45 @@ describe('ChartScreen', () => {
       expect(screen.queryByRole('dialog', { name: '매매 상세' })).not.toBeInTheDocument();
     });
   });
+
+  it('shows the current price and daily change amount/percent fetched via fetchQuote', async () => {
+    // prevClose = 100, currentPrice = 95 -> daily change amount = -5 (-5.00%)
+    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 95, currency: 'USD', dailyChangePercent: -5 });
+    render(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={vi.fn()}
+      />
+    );
+
+    const quoteBlock = await screen.findByTestId('chart-quote');
+    expect(quoteBlock).toHaveTextContent('95');
+    expect(quoteBlock).toHaveTextContent('USD');
+    expect(quoteBlock).toHaveTextContent('5');
+    expect(quoteBlock).toHaveTextContent('(-5.00%)');
+  });
+
+  it('shows a placeholder for daily change when the quote has no dailyChangePercent', async () => {
+    vi.mocked(quotes.fetchQuote).mockResolvedValue({ price: 11.36, currency: 'USD' });
+    render(
+      <ChartScreen
+        db={db}
+        ticker="JOBY"
+        name="조비"
+        tags={[]}
+        positions={[]}
+        sortOrder="recent"
+        onSelectTicker={vi.fn()}
+        onTradeSaved={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText('전일대비 -')).toBeInTheDocument();
+  });
 });

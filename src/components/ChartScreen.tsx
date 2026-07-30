@@ -4,13 +4,13 @@ import type { TradeReviewDB } from '../db/schema';
 import type { Tag, Trade } from '../types';
 import { deleteTrade, listTradesByTicker } from '../db/trades';
 import { getPosition } from '../db/positions';
-import { fetchHistory, type HistoryBar } from '../api/quotes';
+import { fetchHistory, fetchQuote, type HistoryBar, type QuoteResult } from '../api/quotes';
 import { PriceChart } from './PriceChart';
 import { TradeList } from './TradeList';
 import { TradeBottomSheet } from './TradeBottomSheet';
 import { AddTradeSheet } from './AddTradeSheet';
 import { TickerSearch } from './TickerSearch';
-import { adjacentTicker, sortPositionItems, type PositionListItem, type SortOrder } from '../lib/positionNav';
+import { adjacentTicker, dailyChangeAmount, sortPositionItems, type PositionListItem, type SortOrder } from '../lib/positionNav';
 
 interface ChartScreenProps {
   db: IDBPDatabase<TradeReviewDB>;
@@ -36,6 +36,7 @@ export function ChartScreen({
   const [trades, setTrades] = useState<Trade[]>([]);
   const [avgCost, setAvgCost] = useState<number | null>(null);
   const [history, setHistory] = useState<HistoryBar[]>([]);
+  const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [selected, setSelected] = useState<Trade | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
@@ -103,9 +104,13 @@ export function ChartScreen({
     setShowAddSheet(false);
     setTradeToEdit(null);
     setSelected(null);
+    setQuote(null);
     reload();
     fetchHistory(ticker).then((bars) => {
       if (activeTickerRef.current === ticker) setHistory(bars);
+    });
+    fetchQuote(ticker).then((q) => {
+      if (activeTickerRef.current === ticker) setQuote(q);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, ticker]);
@@ -134,6 +139,16 @@ export function ChartScreen({
     closeModal();
     onTradeSaved();
   }
+
+  const dailyPercent = quote?.dailyChangePercent ?? null;
+  const dailyAmount = quote?.price != null && dailyPercent != null ? dailyChangeAmount(quote.price, dailyPercent) : null;
+  const isDailyLoss = dailyPercent != null && dailyPercent < 0;
+  const isDailyProfit = dailyPercent != null && dailyPercent > 0;
+  const dailyColor = isDailyLoss
+    ? 'text-blue-600 dark:text-blue-400'
+    : isDailyProfit
+    ? 'text-rose-600 dark:text-rose-400'
+    : 'text-zinc-500 dark:text-zinc-400';
 
   const selectedDate = selected?.datetime ? selected.datetime.slice(0, 10) : null;
   const tradesOnSameDate = selectedDate
@@ -180,6 +195,30 @@ export function ChartScreen({
           ›
         </button>
       </div>
+
+      {quote?.price != null && (
+        <div data-testid="chart-quote" className="flex flex-col items-center gap-0.5">
+          <div className="font-mono text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            {quote.price.toLocaleString()}
+            <span className="ml-1 text-sm font-medium text-zinc-400 dark:text-zinc-500">
+              {quote.currency === 'USD' ? 'USD' : '원'}
+            </span>
+          </div>
+          {dailyAmount != null && dailyPercent != null ? (
+            <div className={`flex items-center gap-1 font-mono text-sm font-bold ${dailyColor}`}>
+              {isDailyLoss && <span aria-hidden>▼</span>}
+              {isDailyProfit && <span aria-hidden>▲</span>}
+              <span>{Math.abs(dailyAmount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span>
+                ({dailyPercent > 0 ? '+' : ''}
+                {dailyPercent.toFixed(2)}%)
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-zinc-400 dark:text-zinc-500">전일대비 -</span>
+          )}
+        </div>
+      )}
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm shadow-zinc-900/5 dark:border-zinc-800 dark:bg-zinc-900">
         <PriceChart history={history} trades={trades} avgCost={avgCost} onPointSelect={openDetailSheet} />
