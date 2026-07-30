@@ -101,6 +101,30 @@ describe('HomeScreen', () => {
     expect(screen.getByText(/1,431,100/)).toBeInTheDocument();
   });
 
+  it('converts a USD position\'s 매입금액/평가금액 to KRW using the exchange rate, while keeping 평단가/현재가 in USD', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    const usdItem = item({ currency: 'USD', avgCost: 13.06, currentPrice: 7.03, totalQuantity: 780 });
+    render(<HomeScreen positions={[usdItem]} usdKrwRate={1300} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    const row = screen.getByRole('button', { name: /AAPL/ });
+    // 평단가/현재가는 원래 통화(달러) 그대로
+    expect(row).toHaveTextContent('13.06');
+    expect(row).toHaveTextContent('7.03');
+    // 매입금액/평가금액은 환율(1300)로 환산된 원화 금액
+    expect(row).toHaveTextContent((13.06 * 780 * 1300).toLocaleString(undefined, { maximumFractionDigits: 2 }));
+    expect(row).toHaveTextContent((7.03 * 780 * 1300).toLocaleString(undefined, { maximumFractionDigits: 2 }));
+  });
+
+  it('falls back to showing raw USD amounts (labeled $) when no exchange rate is available', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    const usdItem = item({ currency: 'USD', avgCost: 13.06, currentPrice: 7.03, totalQuantity: 780 });
+    render(<HomeScreen positions={[usdItem]} usdKrwRate={null} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    const row = screen.getByRole('button', { name: /AAPL/ });
+    expect(row).toHaveTextContent((13.06 * 780).toLocaleString(undefined, { maximumFractionDigits: 2 }));
+    expect(row).not.toHaveTextContent((13.06 * 780 * 1300).toLocaleString());
+  });
+
   it('does not show a portfolio total when no position has a current price', () => {
     vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
     render(

@@ -120,10 +120,20 @@ export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange
 
       <ul aria-label="보유 주식 목록" className="flex flex-col gap-2.5">
         {sorted.map((item) => {
+          const isUSD = item.currency === 'USD';
+          // 평단가/현재가는 종목이 실제 거래되는 통화 그대로 보여준다(ADR-0001).
+          // 반면 매입금액/평가금액/평가손익 같은 금액은 원화로 환산해서 보여주는 게
+          // 원화 위주로 자산을 파악하는 데 더 유용하므로, 달러 포지션은 당일 환율로
+          // 환산한다(ADR-0001이 명시적으로 허용하는 "화면 표시 시점 환산"). 환율을
+          // 못 구했을 때만 원래 통화(달러) 그대로 보여준다.
+          const amountRate = isUSD ? usdKrwRate ?? 1 : 1;
+          const amountCurrencyLabel = isUSD && usdKrwRate == null ? '$' : '원';
+          const perShareCurrencyLabel = isUSD ? '$' : '원';
+
           const totalQuantity = item.totalQuantity ?? 0;
-          const totalInvested = item.avgCost * totalQuantity;
+          const totalInvested = item.avgCost * totalQuantity * amountRate;
           const totalEvaluation =
-            item.currentPrice != null ? item.currentPrice * totalQuantity : null;
+            item.currentPrice != null ? item.currentPrice * totalQuantity * amountRate : null;
           const rawPnl =
             totalEvaluation != null ? totalEvaluation - totalInvested : null;
           const pnlAmount = rawPnl != null ? (Math.abs(rawPnl) < 0.5 ? 0 : Math.round(rawPnl)) : null;
@@ -163,6 +173,7 @@ export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange
                     {item.currentPrice != null && (
                       <span className="text-base font-extrabold text-zinc-900 dark:text-zinc-50 font-mono">
                         {item.currentPrice.toLocaleString()}
+                        <span className="text-xs font-normal text-zinc-400"> {perShareCurrencyLabel}</span>
                       </span>
                     )}
                     {dailyChange != null ? (
@@ -193,7 +204,8 @@ export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange
                     <div className="flex flex-col">
                       <span className="text-zinc-400 dark:text-zinc-500">평단가</span>
                       <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono">
-                        {item.avgCost.toLocaleString()} <span className="text-[0.65rem] font-normal text-zinc-400">원</span>
+                        {item.avgCost.toLocaleString()}{' '}
+                        <span className="text-[0.65rem] font-normal text-zinc-400">{perShareCurrencyLabel}</span>
                       </span>
                     </div>
                     <div className="flex flex-col">
@@ -250,7 +262,7 @@ export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange
                           ? totalInvested.toLocaleString(undefined, { maximumFractionDigits: 2 })
                           : '-'}
                         {totalInvested > 0 && (
-                          <span className="text-[0.65rem] font-normal text-zinc-400"> 원</span>
+                          <span className="text-[0.65rem] font-normal text-zinc-400"> {amountCurrencyLabel}</span>
                         )}
                       </span>
                     </div>
@@ -269,7 +281,7 @@ export function HomeScreen({ positions, usdKrwRate, sortOrder, onSortOrderChange
                           >
                             {totalEvaluation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[0.65rem] font-normal text-zinc-400 dark:text-zinc-500"> 원</span>
+                          <span className="text-[0.65rem] font-normal text-zinc-400 dark:text-zinc-500"> {amountCurrencyLabel}</span>
                         </span>
                       ) : (
                         <span className="text-zinc-400 font-mono">-</span>
