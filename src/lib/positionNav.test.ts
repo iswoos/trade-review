@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { sortPositionItems, adjacentTicker, calculatePortfolioTotal, type PositionListItem } from './positionNav';
+import {
+  sortPositionItems,
+  adjacentTicker,
+  calculatePortfolioTotal,
+  dailyChangeAmount,
+  type PositionListItem,
+} from './positionNav';
 
 function item(overrides: Partial<PositionListItem> = {}): PositionListItem {
   return {
@@ -113,5 +119,21 @@ describe('calculatePortfolioTotal', () => {
 
   it('returns null when there are no positions', () => {
     expect(calculatePortfolioTotal([], null)).toBeNull();
+  });
+});
+
+describe('dailyChangeAmount', () => {
+  it('derives the price change from the current price and percent', () => {
+    // prevClose = 100, currentPrice = 105 -> pct = 5
+    expect(dailyChangeAmount(105, 5)).toBeCloseTo(5);
+  });
+
+  it('handles a negative percent', () => {
+    // prevClose = 100, currentPrice = 95 -> pct = -5
+    expect(dailyChangeAmount(95, -5)).toBeCloseTo(-5);
+  });
+
+  it('returns 0 for a 0% change', () => {
+    expect(dailyChangeAmount(100, 0)).toBe(0);
   });
 });
