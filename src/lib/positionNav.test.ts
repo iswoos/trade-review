@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortPositionItems, adjacentTicker, type PositionListItem } from './positionNav';
+import { sortPositionItems, adjacentTicker, calculatePortfolioTotal, type PositionListItem } from './positionNav';
 
 function item(overrides: Partial<PositionListItem> = {}): PositionListItem {
   return {
@@ -78,5 +78,40 @@ describe('adjacentTicker', () => {
 
   it('returns null when the current ticker is not in the list', () => {
     expect(adjacentTicker(order, 'GME', 'next')).toBeNull();
+  });
+});
+
+describe('calculatePortfolioTotal', () => {
+  it('sums KRW-only positions directly', () => {
+    const items = [
+      item({ ticker: 'A', currency: 'KRW', avgCost: 100, currentPrice: 120, totalQuantity: 10 }),
+      item({ ticker: 'B', currency: 'KRW', avgCost: 200, currentPrice: 180, totalQuantity: 5 }),
+    ];
+    const total = calculatePortfolioTotal(items, null);
+    expect(total).toEqual({ totalInvested: 2000, totalEvaluation: 2100, pnlAmount: 100, pnlPercent: 5 });
+  });
+
+  it('converts USD positions to KRW using the given rate', () => {
+    const items = [item({ ticker: 'AAPL', currency: 'USD', avgCost: 100, currentPrice: 110, totalQuantity: 10 })];
+    const total = calculatePortfolioTotal(items, 1300);
+    expect(total).toEqual({ totalInvested: 1_300_000, totalEvaluation: 1_430_000, pnlAmount: 130_000, pnlPercent: 10 });
+  });
+
+  it('excludes a USD position when no exchange rate is available', () => {
+    const items = [
+      item({ ticker: 'AAPL', currency: 'USD', avgCost: 100, currentPrice: 110, totalQuantity: 10 }),
+      item({ ticker: 'KR', currency: 'KRW', avgCost: 1000, currentPrice: 1100, totalQuantity: 1 }),
+    ];
+    const total = calculatePortfolioTotal(items, null);
+    expect(total).toEqual({ totalInvested: 1000, totalEvaluation: 1100, pnlAmount: 100, pnlPercent: 10 });
+  });
+
+  it('excludes positions without a current price', () => {
+    const items = [item({ ticker: 'UNKNOWN', currency: 'KRW', currentPrice: null })];
+    expect(calculatePortfolioTotal(items, null)).toBeNull();
+  });
+
+  it('returns null when there are no positions', () => {
+    expect(calculatePortfolioTotal([], null)).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import { openTradeReviewDB, type TradeReviewDB } from './db/schema';
 import { listActiveTags, seedDefaultTags } from './db/tags';
 import { listPositions } from './db/positions';
 import { requestPersistentStorage } from './lib/persistStorage';
-import { fetchQuote } from './api/quotes';
+import { fetchQuote, fetchFxRate } from './api/quotes';
 import { HomeScreen } from './components/HomeScreen';
 import { ChartScreen } from './components/ChartScreen';
 import { TagManagementScreen } from './components/TagManagementScreen';
@@ -15,7 +15,10 @@ export function App() {
   const [db, setDb] = useState<IDBPDatabase<TradeReviewDB> | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [quotes, setQuotes] = useState<Record<string, { price: number | null; dailyChangePercent?: number | null }>>({});
+  const [quotes, setQuotes] = useState<
+    Record<string, { price: number | null; dailyChangePercent?: number | null; currency?: 'USD' | 'KRW' | null }>
+  >({});
+  const [usdKrwRate, setUsdKrwRate] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
   const [screen, setScreen] = useState<'home' | 'chart' | 'tags'>('home');
   const [activeTicker, setActiveTicker] = useState<string | null>(null);
@@ -25,12 +28,22 @@ export function App() {
     const pos = await listPositions(database);
     setPositions(pos);
     const entries = await Promise.all(
-      pos.map(async (p): Promise<[string, { price: number | null; dailyChangePercent?: number | null }]> => {
+      pos.map(async (
+        p
+      ): Promise<[string, { price: number | null; dailyChangePercent?: number | null; currency?: 'USD' | 'KRW' | null }]> => {
         const q = await fetchQuote(p.ticker);
-        return [p.ticker, { price: q?.price ?? null, dailyChangePercent: q?.dailyChangePercent ?? null }];
+        return [p.ticker, { price: q?.price ?? null, dailyChangePercent: q?.dailyChangePercent ?? null, currency: q?.currency ?? null }];
       })
     );
-    setQuotes(Object.fromEntries(entries));
+    const quoteMap = Object.fromEntries(entries);
+    setQuotes(quoteMap);
+
+    if (Object.values(quoteMap).some((q) => q.currency === 'USD')) {
+      const today = new Date().toISOString().slice(0, 10);
+      setUsdKrwRate(await fetchFxRate(today));
+    } else {
+      setUsdKrwRate(null);
+    }
   }
 
   useEffect(() => {
@@ -87,6 +100,7 @@ export function App() {
           lastTradeRecordedAt: p.lastTradeRecordedAt,
           currentPrice: quotes[p.ticker]?.price ?? null,
           dailyChangePercent: quotes[p.ticker]?.dailyChangePercent ?? null,
+          currency: quotes[p.ticker]?.currency ?? null,
           buyCnt: p.buyCnt,
           sellCnt: p.sellCnt,
           noteCnt: p.noteCnt,
@@ -126,6 +140,7 @@ export function App() {
       {screen === 'home' && (
         <HomeScreen
           positions={positionItems}
+          usdKrwRate={usdKrwRate}
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
           onSelectTicker={handleSelectTicker}
