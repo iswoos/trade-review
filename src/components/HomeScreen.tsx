@@ -23,6 +23,11 @@ const SORT_LABELS: Record<SortOrder, string> = {
   pnl: '평가손익순',
 };
 
+// 종목명 열은 국내/해외 표가 각자 따로 자기 컬럼 너비를 정하기 때문에, 고정
+// 너비 없이 두면 "Joby Aviation, Inc." 같은 긴 이름 때문에 표마다 첫 열 폭이
+// 제각각으로 벌어진다. 폭을 고정하고 넘치는 이름은 말줄임표로 자른다.
+const STICKY_COL_WIDTH_CLASS = 'w-[124px] min-w-[124px] max-w-[124px]';
+
 function pnlColor(isLoss: boolean, isProfit: boolean): string {
   if (isLoss) return 'text-blue-600 dark:text-blue-400';
   if (isProfit) return 'text-rose-600 dark:text-rose-400';
@@ -96,9 +101,13 @@ function PositionRow({
       }}
       className="cursor-pointer text-left transition active:scale-[0.99] focus:outline-none focus-visible:bg-zinc-50 dark:focus-visible:bg-zinc-800/60"
     >
-      <td className="sticky left-0 z-10 border-r border-zinc-100 bg-white px-3 py-2.5 align-middle dark:border-zinc-800/60 dark:bg-zinc-900">
-        <div className="text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-50">{item.name || item.ticker}</div>
-        <div className="text-[0.68rem] font-medium text-zinc-400 dark:text-zinc-500">
+      <td
+        className={`sticky left-0 z-10 border-r border-zinc-100 bg-white px-3 py-2.5 align-middle dark:border-zinc-800/60 dark:bg-zinc-900 ${STICKY_COL_WIDTH_CLASS}`}
+      >
+        <div className="truncate text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+          {item.name || item.ticker}
+        </div>
+        <div className="truncate text-[0.68rem] font-medium text-zinc-400 dark:text-zinc-500">
           {item.ticker} · {formattedQty}주
         </div>
         {(item.buyCnt > 0 || item.sellCnt > 0 || item.noteCnt > 0) && (
@@ -217,7 +226,7 @@ function PositionRow({
 const HEADER_CELL_BASE_CLASS =
   'whitespace-nowrap border-b border-zinc-100 px-3 py-2 text-right text-[0.63rem] font-bold uppercase tracking-wide text-zinc-400 dark:border-zinc-800/60 dark:text-zinc-500';
 const HEADER_CELL_CLASS = `${HEADER_CELL_BASE_CLASS} bg-zinc-50/80 dark:bg-zinc-800/40`;
-const STICKY_HEADER_CELL_CLASS = `sticky left-0 z-10 min-w-[112px] border-r bg-zinc-100 text-left dark:bg-zinc-800 ${HEADER_CELL_BASE_CLASS}`;
+const STICKY_HEADER_CELL_CLASS = `sticky left-0 z-10 border-r bg-zinc-100 text-left dark:bg-zinc-800 ${HEADER_CELL_BASE_CLASS} ${STICKY_COL_WIDTH_CLASS}`;
 
 function PositionTable({
   title,
