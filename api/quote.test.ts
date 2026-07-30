@@ -9,7 +9,6 @@ function mockRes() {
 }
 
 beforeEach(() => {
-  process.env.DATA_GO_KR_API_KEY = 'test-key';
   process.env.TWELVE_DATA_API_KEY = 'test-key';
 });
 
@@ -24,30 +23,32 @@ describe('GET /api/quote', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it('routes Korean symbols (.KS) to data.go.kr and reports currency as KRW', async () => {
+  it('routes Korean symbols (.KS) to Yahoo Finance and reports currency as KRW', async () => {
+    const regularMarketTime = Math.floor(Date.UTC(2026, 6, 23) / 1000);
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          response: {
-            header: { resultCode: '00', resultMsg: 'OK' },
-            body: {
-              items: { item: [{ basDt: '20260723', srtnCd: '005930', clpr: '71000' }] },
-              numOfRows: 1,
-              pageNo: 1,
-              totalCount: 1,
-            },
+          chart: {
+            result: [
+              {
+                meta: { regularMarketPrice: 71000, regularMarketTime, gmtoffset: 32400, currency: 'KRW' },
+                timestamp: [regularMarketTime],
+                indicators: { quote: [{ open: [71000], high: [71000], low: [71000], close: [71000] }] },
+              },
+            ],
+            error: null,
           },
         }),
       })
     );
     const res = mockRes();
     await handler({ query: { symbol: '005930.KS' } } as any, res);
-    expect(res.json).toHaveBeenCalledWith({ symbol: '005930.KS', price: 71000, currency: 'KRW' });
+    expect(res.json).toHaveBeenCalledWith({ symbol: '005930.KS', price: 71000, currency: 'KRW', dailyChangePercent: null });
   });
 
-  it('returns 502 when data.go.kr lookup fails for a Korean symbol', async () => {
+  it('returns 502 when the Yahoo Finance lookup fails for a Korean symbol', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
     const res = mockRes();
     await handler({ query: { symbol: '005930.KS' } } as any, res);
@@ -61,7 +62,7 @@ describe('GET /api/quote', () => {
     );
     const res = mockRes();
     await handler({ query: { symbol: 'AAPL' } } as any, res);
-    expect(res.json).toHaveBeenCalledWith({ symbol: 'AAPL', price: 320.27, currency: 'USD' });
+    expect(res.json).toHaveBeenCalledWith({ symbol: 'AAPL', price: 320.27, currency: 'USD', dailyChangePercent: null });
   });
 
   it('returns 502 when the Twelve Data lookup fails', async () => {

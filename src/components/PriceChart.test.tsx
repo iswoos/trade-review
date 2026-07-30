@@ -184,7 +184,7 @@ describe('PriceChart', () => {
 
     const arrow = screen.getByRole('button', { name: '매수 2026-01-01' });
     expect(arrow).toBeInTheDocument();
-    expect(arrow).toHaveTextContent('01-01');
+    expect(arrow).toHaveTextContent('01.01');
     expect(arrow).toHaveTextContent('🔴');
   });
 
@@ -226,7 +226,7 @@ describe('PriceChart', () => {
     );
 
     const buyArrow = screen.getByRole('button', { name: '매수 2026-01-01' });
-    expect(buyArrow).toHaveTextContent('01-01');
+    expect(buyArrow).toHaveTextContent('01.01');
     expect(buyArrow).toHaveTextContent('🔴2');
     expect(buyArrow).toHaveTextContent('🔵');
   });
