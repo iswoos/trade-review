@@ -210,8 +210,14 @@ function PositionRow({
   );
 }
 
-const HEADER_CELL_CLASS =
-  'border-b border-zinc-100 bg-zinc-50/80 px-3 py-2 text-right text-[0.63rem] font-bold uppercase tracking-wide text-zinc-400 dark:border-zinc-800/60 dark:bg-zinc-800/40 dark:text-zinc-500';
+// white-space는 상속 속성이라 <table>에 한 번만 nowrap을 걸어도 모든 셀에 전파된다
+// (표가 짜부라지면서 "인터플렉스" 같은 종목명이나 "현재가 · 평단가" 헤더가 줄바꿈되는
+// 문제 방지). 배경은 반드시 불투명해야 한다 - 반투명이면 sticky 종목명 열 밑으로
+// 스크롤되어 사라져야 할 다른 헤더 텍스트가 비쳐 보인다.
+const HEADER_CELL_BASE_CLASS =
+  'whitespace-nowrap border-b border-zinc-100 px-3 py-2 text-right text-[0.63rem] font-bold uppercase tracking-wide text-zinc-400 dark:border-zinc-800/60 dark:text-zinc-500';
+const HEADER_CELL_CLASS = `${HEADER_CELL_BASE_CLASS} bg-zinc-50/80 dark:bg-zinc-800/40`;
+const STICKY_HEADER_CELL_CLASS = `sticky left-0 z-10 min-w-[112px] border-r bg-zinc-100 text-left dark:bg-zinc-800 ${HEADER_CELL_BASE_CLASS}`;
 
 function PositionTable({
   title,
@@ -233,17 +239,20 @@ function PositionTable({
       <div className="section-label px-1 pb-1.5 text-[0.7rem] font-bold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
         {title}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
         <div className="overflow-x-auto">
-          <table aria-label={`${title} 목록`} className="w-full border-collapse bg-white dark:bg-zinc-900">
+          <table
+            aria-label={`${title} 목록`}
+            className="min-w-full whitespace-nowrap border-collapse bg-white dark:bg-zinc-900"
+          >
             <thead>
               <tr>
-                <th className={`sticky left-0 z-10 border-r ${HEADER_CELL_CLASS} text-left`}>종목명</th>
-                <th className={HEADER_CELL_CLASS}>현재가 · 평단가</th>
-                <th className={HEADER_CELL_CLASS}>평가손익 · 수익률</th>
-                <th className={HEADER_CELL_CLASS}>매입 · 평가금액</th>
-                <th className={HEADER_CELL_CLASS}>전일대비</th>
-                <th className={HEADER_CELL_CLASS}>보유비중</th>
+                <th className={STICKY_HEADER_CELL_CLASS}>종목명</th>
+                <th className={`min-w-[96px] ${HEADER_CELL_CLASS}`}>현재가 · 평단가</th>
+                <th className={`min-w-[92px] ${HEADER_CELL_CLASS}`}>평가손익 · 수익률</th>
+                <th className={`min-w-[104px] ${HEADER_CELL_CLASS}`}>매입 · 평가금액</th>
+                <th className={`min-w-[76px] ${HEADER_CELL_CLASS}`}>전일대비</th>
+                <th className={`min-w-[64px] ${HEADER_CELL_CLASS}`}>보유비중</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
@@ -259,6 +268,12 @@ function PositionTable({
             </tbody>
           </table>
         </div>
+        {/* 오른쪽에 더 스크롤할 열이 있다는 걸 알려주는 정적 힌트. 홈 화면은 하루에도
+            여러 번 보는 화면이라 애니메이션 대신 고정된 그라데이션만 둔다. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white dark:from-zinc-900"
+        />
       </div>
     </div>
   );
