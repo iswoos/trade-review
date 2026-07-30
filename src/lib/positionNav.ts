@@ -46,6 +46,15 @@ export function calculatePortfolioTotal(items: PositionListItem[], usdKrwRate: n
   return { totalInvested, totalEvaluation, pnlAmount, pnlPercent };
 }
 
+// 전일 종가를 별도로 저장하지 않고 currentPrice/dailyChangePercent에서 역산한다.
+// currentPrice = prevClose * (1 + pct/100) 이므로, 변동액 = currentPrice - prevClose
+//              = currentPrice * pct / (100 + pct).
+export function dailyChangeAmount(currentPrice: number, dailyChangePercent: number): number {
+  const denominator = 100 + dailyChangePercent;
+  if (denominator === 0) return 0;
+  return (currentPrice * dailyChangePercent) / denominator;
+}
+
 export type SortOrder = 'recent' | 'alphabetical' | 'pnl';
 
 function pnlPercent(item: PositionListItem): number {

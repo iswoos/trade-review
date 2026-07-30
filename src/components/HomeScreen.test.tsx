@@ -125,6 +125,55 @@ describe('HomeScreen', () => {
     expect(row).not.toHaveTextContent((13.06 * 780 * 1300).toLocaleString());
   });
 
+  it('groups positions into 국내 주식 / 해외 주식 tables by currency', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    const items = [
+      item({ ticker: 'KR', name: '국내종목', currency: 'KRW' }),
+      item({ ticker: 'AAPL', name: '해외종목', currency: 'USD' }),
+    ];
+    render(<HomeScreen positions={items} usdKrwRate={1300} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    const krTable = screen.getByRole('table', { name: '국내 주식 목록' });
+    const usTable = screen.getByRole('table', { name: '해외 주식 목록' });
+    expect(krTable).toHaveTextContent('국내종목');
+    expect(krTable).not.toHaveTextContent('해외종목');
+    expect(usTable).toHaveTextContent('해외종목');
+    expect(usTable).not.toHaveTextContent('국내종목');
+  });
+
+  it('does not render a market section with no positions', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    render(<HomeScreen positions={[item({ currency: 'KRW' })]} usdKrwRate={null} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    expect(screen.queryByRole('table', { name: '해외 주식 목록' })).not.toBeInTheDocument();
+  });
+
+  it('shows each position\'s share of the total portfolio evaluation', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    const items = [
+      item({ ticker: 'A', name: 'Stock A', currency: 'KRW', avgCost: 100, currentPrice: 100, totalQuantity: 1 }),
+      item({ ticker: 'B', name: 'Stock B', currency: 'KRW', avgCost: 100, currentPrice: 300, totalQuantity: 1 }),
+    ];
+    render(<HomeScreen positions={items} usdKrwRate={null} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    // 평가금액 100 vs 300, 총합 400 -> A 25.0%, B 75.0%
+    expect(screen.getByRole('button', { name: /Stock A/ })).toHaveTextContent('25.0%');
+    expect(screen.getByRole('button', { name: /Stock B/ })).toHaveTextContent('75.0%');
+  });
+
+  it('shows the daily change amount alongside the percent', () => {
+    vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
+    // avgCost 50 keeps the overall P&L% (+120%) distinct from the daily change (+10%).
+    // prevClose = 100, currentPrice = 110 -> daily change amount = +10 (+10.00%)
+    const withDailyChange = item({ avgCost: 50, currentPrice: 110, dailyChangePercent: 10 });
+    render(<HomeScreen positions={[withDailyChange]} usdKrwRate={null} sortOrder="recent" onSortOrderChange={vi.fn()} onSelectTicker={vi.fn()} onOpenTagManagement={vi.fn()} />);
+
+    const row = screen.getByRole('button', { name: /AAPL/ });
+    expect(row).toHaveTextContent('+10');
+    expect(row).toHaveTextContent('+10.00%');
+    expect(row).toHaveTextContent('+120.00%');
+  });
+
   it('does not show a portfolio total when no position has a current price', () => {
     vi.mocked(quotes.searchSymbols).mockResolvedValue([]);
     render(

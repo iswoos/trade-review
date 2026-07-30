@@ -137,7 +137,7 @@ describe('App', () => {
 
     window.history.back();
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('region', { name: '보유 주식 목록' })).toBeInTheDocument());
     expect(screen.queryByTestId('price-chart')).not.toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '홈' }));
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('region', { name: '보유 주식 목록' })).toBeInTheDocument());
   });
 
   it('switching tickers while already on the chart screen replaces history instead of stacking (one back returns to home)', async () => {
@@ -165,7 +165,7 @@ describe('App', () => {
 
     window.history.back();
 
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('region', { name: '보유 주식 목록' })).toBeInTheDocument());
   });
 
   it('navigates to the tag management screen and back via the home button', async () => {
@@ -174,7 +174,7 @@ describe('App', () => {
     expect(await screen.findByRole('list', { name: '태그 목록' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '홈' }));
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('region', { name: '보유 주식 목록' })).toBeInTheDocument());
   });
 
   it('a tag created in tag management is available for selection in a newly opened trade form', async () => {
@@ -185,7 +185,7 @@ describe('App', () => {
     await screen.findByText('장기투자');
 
     await userEvent.click(screen.getByRole('button', { name: '홈' }));
-    await waitFor(() => expect(screen.getByRole('list', { name: '보유 주식 목록' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('region', { name: '보유 주식 목록' })).toBeInTheDocument());
 
     await userEvent.type(screen.getByLabelText('종목 검색'), 'joby');
     await userEvent.click(await screen.findByRole('button', { name: /조비 \(JOBY\)/ }));
